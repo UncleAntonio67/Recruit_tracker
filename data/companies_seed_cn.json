@@ -1,0 +1,183 @@
+[
+  {
+    "name": "国家电网 (SGCC)",
+    "industry": "能源与电力",
+    "company_type": "央企",
+    "hq_location": "北京（及全国直属单位）",
+    "focus_directions": "电力物联网后台、业务系统开发、数据中心研发",
+    "website": "https://www.sgcc.com.cn",
+    "recruitment_url": "https://zhaopin.sgcc.com.cn"
+  },
+  {
+    "name": "国家能源集团",
+    "industry": "能源与电力",
+    "company_type": "央企",
+    "hq_location": "北京",
+    "focus_directions": "能源信息化系统、后端开发、工业互联网平台",
+    "website": "https://www.chnenergy.com.cn",
+    "recruitment_url": "https://zhaopin.chnenergy.com.cn"
+  },
+  {
+    "name": "中国电科第十八研究所",
+    "industry": "电池与新能源",
+    "company_type": "科研院所/国企",
+    "hq_location": "天津",
+    "focus_directions": "电池研发、BMS控制软件开发",
+    "website": "",
+    "recruitment_url": ""
+  },
+  {
+    "name": "宁德时代 (CATL)",
+    "industry": "电池与新能源",
+    "company_type": "民企/行业龙头",
+    "hq_location": "宁德（福建）/上海/北京等",
+    "focus_directions": "BMS软件、数据分析、前后端开发",
+    "website": "https://www.catl.com",
+    "recruitment_url": "https://talent.catl.com"
+  },
+  {
+    "name": "比亚迪 (BYD)",
+    "industry": "电池与新能源",
+    "company_type": "民企/行业龙头",
+    "hq_location": "深圳/西安/北京等",
+    "focus_directions": "新能源汽车软件架构、全栈开发、前端/UI交互开发",
+    "website": "https://www.byd.com",
+    "recruitment_url": "https://job.byd.com"
+  },
+  {
+    "name": "建信金科 (建设银行)",
+    "industry": "银行与金融科技",
+    "company_type": "国有银行科技子公司",
+    "hq_location": "北京/上海/厦门",
+    "focus_directions": "金融后台架构、小程序/APP开发、财富管理系统研发",
+    "website": "https://job.ccb.com",
+    "recruitment_url": "https://job.ccb.com"
+  },
+  {
+    "name": "工银科技 (工商银行)",
+    "industry": "银行与金融科技",
+    "company_type": "国有银行科技子公司",
+    "hq_location": "北京/雄安/上海",
+    "focus_directions": "银行核心系统、前端开发、大数据应用平台",
+    "website": "https://job.icbc.com.cn",
+    "recruitment_url": "https://job.icbc.com.cn"
+  },
+  {
+    "name": "农银金科 (农业银行)",
+    "industry": "银行与金融科技",
+    "company_type": "国有银行科技子公司",
+    "hq_location": "北京（总部）",
+    "focus_directions": "数字化转型项目、前后端研发、金融BI系统",
+    "website": "https://career.abchina.com.cn",
+    "recruitment_url": "https://career.abchina.com.cn"
+  },
+  {
+    "name": "中国软件 (CSS) / 中国电子",
+    "industry": "科技与软件",
+    "company_type": "央企/国企",
+    "hq_location": "北京",
+    "focus_directions": "操作系统生态、政务软件前后端、中间件",
+    "website": "https://www.css.com.cn",
+    "recruitment_url": "https://www.css.com.cn"
+  },
+  {
+    "name": "中国科学院计算技术研究所",
+    "industry": "科技与软件",
+    "company_type": "科研院所",
+    "hq_location": "北京",
+    "focus_directions": "大模型应用、数据智能(BI)、底层架构",
+    "website": "http://www.ict.cas.cn",
+    "recruitment_url": "http://www.ict.cas.cn/rcdw/zpzl/"
+  },
+  {
+    "name": "中国移动信息技术中心",
+    "industry": "科技与软件",
+    "company_type": "央企",
+    "hq_location": "北京（全国岗位）",
+    "focus_directions": "业务中台、全栈、管理系统前后端",
+    "website": "https://job.10086.cn",
+    "recruitment_url": "https://job.10086.cn"
+  },
+  {
+    "name": "太极计算机 (中国电科15所)",
+    "industry": "科技与软件",
+    "company_type": "央企/国企",
+    "hq_location": "北京",
+    "focus_directions": "政务云平台、大型软件系统集成、全栈开发",
+    "website": "https://www.taiji.com.cn",
+    "recruitment_url": "https://www.taiji.com.cn"
+  },
+  {
+    "name": "腾讯 (Tencent)",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "深圳/北京/上海/广州",
+    "focus_directions": "后端/架构/数据/项目管理/金融科技/新能源相关",
+    "website": "https://careers.tencent.com",
+    "recruitment_url": "https://careers.tencent.com"
+  },
+  {
+    "name": "快手 (Kuaishou)",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "北京/深圳/杭州/上海",
+    "focus_directions": "后端/数据/平台/架构",
+    "website": "https://zhaopin.kuaishou.cn",
+    "recruitment_url": "https://zhaopin.kuaishou.cn"
+  },
+  {
+    "name": "美团",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "北京/上海/深圳/广州",
+    "focus_directions": "后端/数据/平台/架构/项目管理",
+    "website": "https://zhaopin.meituan.com",
+    "recruitment_url": "https://zhaopin.meituan.com"
+  },
+  {
+    "name": "京东",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "北京/上海/深圳/广州",
+    "focus_directions": "后端/数据/平台/架构/项目管理",
+    "website": "https://zhaopin.jd.com",
+    "recruitment_url": "https://zhaopin.jd.com"
+  },
+  {
+    "name": "字节跳动",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "北京/上海/深圳/广州",
+    "focus_directions": "后端/数据/架构/项目管理",
+    "website": "https://jobs.bytedance.com",
+    "recruitment_url": "https://jobs.bytedance.com"
+  },
+  {
+    "name": "阿里巴巴",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "杭州/北京/上海/深圳",
+    "focus_directions": "后端/数据/平台/架构/金融科技",
+    "website": "https://talent.alibaba.com",
+    "recruitment_url": "https://talent.alibaba.com"
+  },
+  {
+    "name": "百度",
+    "industry": "互联网/科技大厂",
+    "company_type": "民企/互联网大厂",
+    "hq_location": "北京/上海/深圳",
+    "focus_directions": "后端/数据/平台/架构/大模型应用",
+    "website": "https://talent.baidu.com",
+    "recruitment_url": "https://talent.baidu.com"
+  },
+  {
+    "name": "华为",
+    "industry": "科技/通信",
+    "company_type": "民企/头部大厂",
+    "hq_location": "深圳/东莞/上海/北京等",
+    "focus_directions": "系统架构、云/数据、平台研发、项目管理",
+    "website": "https://career.huawei.com",
+    "recruitment_url": "https://career.huawei.com"
+  }
+]
+

@@ -1,0 +1,46 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ title or "Recruit Tracker" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900">
+    <header class="border-b bg-white">
+      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <a class="font-semibold tracking-tight" href="/jobs">Recruit Tracker</a>
+          {% if user %}
+            <nav class="text-sm text-slate-600 flex gap-3">
+              <a class="hover:text-slate-900" href="/jobs">岗位</a>
+              <a class="hover:text-slate-900" href="/companies">企业</a>
+              <a class="hover:text-slate-900" href="/applications">投递</a>
+              <a class="hover:text-slate-900" href="/applications/new">新建投递</a>
+              <a class="hover:text-slate-900" href="/jobs/import">导入</a>
+              {% if user.is_admin %}
+                <a class="hover:text-slate-900" href="/admin/users">用户</a>
+                <a class="hover:text-slate-900" href="/admin/sources">采集</a>
+              {% endif %}
+            </nav>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-3">
+          {% if user %}
+            <span class="text-sm text-slate-600">{{ user.username }}</span>
+            <form action="/logout" method="post">
+              <button class="text-sm px-3 py-1 rounded border hover:bg-slate-50" type="submit">退出</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+    <main class="mx-auto max-w-6xl px-4 py-6">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
+
+
+

@@ -1,0 +1,8 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">当前用户</h1>
+  <div class="mt-4 bg-white border rounded p-4">
+    <div class="text-sm">用户名: <span class="font-medium">{{ user.username }}</span></div>
+    <div class="text-sm mt-1">管理员: <span class="font-medium">{{ "是" if user.is_admin else "否" }}</span></div>
+  </div>
+{% endblock %}

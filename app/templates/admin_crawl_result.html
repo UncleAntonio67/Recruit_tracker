@@ -1,0 +1,13 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">采集结果</h1>
+  <p class="text-sm text-slate-600 mt-1">since_days={{ stats.since_days }} · sources={{ stats.sources }} · seen={{ stats.jobs_seen }} · created={{ stats.jobs_created }} · errors={{ stats.errors }}</p>
+
+  <div class="mt-5 bg-white border rounded p-4">
+    <pre class="whitespace-pre-wrap text-sm text-slate-700">{{ stats | tojson(indent=2) }}</pre>
+  </div>
+
+  <div class="mt-4">
+    <a class="text-sm underline" href="/admin/sources">返回采集源</a>
+  </div>
+{% endblock %}

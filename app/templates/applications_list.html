@@ -1,0 +1,52 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">投递</h1>
+      <p class="text-sm text-slate-600 mt-1">只显示你自己的记录。</p>
+    </div>
+    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications/new">新建投递</a>
+  </div>
+
+  <form class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white border rounded p-4" method="get" action="/applications">
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">关键词</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">阶段</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
+        <option value="">全部</option>
+        {% for s in stages %}
+          <option value="{{ s }}" {% if filters.stage == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
+      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications">清空</a>
+    </div>
+  </form>
+
+  <div class="mt-5 bg-white border rounded overflow-hidden">
+    <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">
+      <div class="col-span-5">岗位</div>
+      <div class="col-span-3">公司</div>
+      <div class="col-span-2">阶段</div>
+      <div class="col-span-2">优先级</div>
+    </div>
+    {% for a in apps %}
+      <a class="block hover:bg-slate-50" href="/applications/{{ a.id }}">
+        <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b">
+          <div class="col-span-5 font-medium">{{ a.title_text }}</div>
+          <div class="col-span-3 text-slate-700">{{ a.company_text or "-" }}</div>
+          <div class="col-span-2 text-slate-700">{{ a.stage }}</div>
+          <div class="col-span-2 text-slate-700">{{ a.priority }}</div>
+        </div>
+      </a>
+    {% endfor %}
+    {% if apps|length == 0 %}
+      <div class="px-4 py-8 text-sm text-slate-600">暂无投递记录。去岗位详情页“创建投递记录”，或手动新建。</div>
+    {% endif %}
+  </div>
+{% endblock %}

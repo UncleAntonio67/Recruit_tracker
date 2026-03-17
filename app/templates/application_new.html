@@ -1,0 +1,43 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">新建投递</h1>
+  <p class="text-sm text-slate-600 mt-1">用于无法关联岗位库的投递(例如临时内推、线下机会)。</p>
+
+  <form class="mt-5 bg-white border rounded p-4 space-y-3 max-w-2xl" method="post" action="/applications/new">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-slate-600">岗位</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="title_text" required />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">公司(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_text" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">城市(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="city_text" placeholder="北京/上海/广州/深圳" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">渠道(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="channel" placeholder="官网/内推/猎头" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">原文链接(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">阶段</label>
+        <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
+          {% for s in stages %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">优先级(1高-5低)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" type="number" min="1" max="5" name="priority" value="3" />
+      </div>
+    </div>
+    <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">创建</button>
+  </form>
+{% endblock %}

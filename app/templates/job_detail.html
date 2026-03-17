@@ -1,0 +1,48 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">{{ job.title }}</h1>
+      <p class="text-sm text-slate-600 mt-1">
+        {{ company.name if company else "未关联公司" }}
+        {% if job.city %} · {{ job.city }}{% endif %}
+        {% if job.published_at %} · 发布: {{ job.published_at | fmt_dt('%Y-%m-%d') }}{% endif %}
+      </p>
+      {% if job.tags and job.tags|length > 0 %}
+        <p class="mt-2 text-sm text-slate-700">标签: {{ job.tags | join(", ") }}</p>
+      {% endif %}
+    </div>
+    <form class="flex items-end gap-2" method="post" action="/jobs/{{ job.id }}/apply">
+      <div>
+        <label class="block text-xs text-slate-600">投递渠道(可选)</label>
+        <input class="mt-1 px-3 py-2 border rounded" name="channel" placeholder="官网/内推/..." />
+      </div>
+      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">创建投递记录</button>
+    </form>
+  </div>
+
+  <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="md:col-span-2 bg-white border rounded p-4">
+      <h2 class="font-semibold">摘要</h2>
+      {% if job.excerpt %}
+        <pre class="mt-2 whitespace-pre-wrap text-sm text-slate-700">{{ job.excerpt }}</pre>
+      {% else %}
+        <p class="mt-2 text-sm text-slate-600">无摘要。</p>
+      {% endif %}
+    </div>
+    <div class="bg-white border rounded p-4">
+      <h2 class="font-semibold">来源</h2>
+      <ul class="mt-2 space-y-2">
+        {% for s in sources %}
+          <li class="text-sm">
+            <div class="text-slate-600">{{ s.source_type }}{% if s.source_name %} · {{ s.source_name }}{% endif %}</div>
+            <a class="text-slate-900 underline break-all" href="{{ s.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if sources|length == 0 %}
+        <p class="mt-2 text-sm text-slate-600">无来源链接。</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

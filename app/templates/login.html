@@ -1,0 +1,31 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>登录 | Recruit Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center px-4">
+    <div class="w-full max-w-md bg-white border rounded-lg shadow-sm p-6">
+      <h1 class="text-xl font-semibold">登录</h1>
+      <p class="text-sm text-slate-600 mt-1">内部使用</p>
+      {% if error %}
+        <div class="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">{{ error }}</div>
+      {% endif %}
+      <form class="mt-5 space-y-3" action="/login" method="post">
+        <div>
+          <label class="block text-sm text-slate-700">用户名</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="username" autocomplete="username" required />
+        </div>
+        <div>
+          <label class="block text-sm text-slate-700">密码</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" type="password" name="password" autocomplete="current-password" required />
+        </div>
+        <button class="w-full px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">进入</button>
+      </form>
+      <p class="text-xs text-slate-500 mt-4">首次部署请配置 BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD 或用管理命令创建用户。</p>
+    </div>
+  </body>
+</html>

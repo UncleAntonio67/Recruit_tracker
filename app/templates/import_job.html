@@ -1,0 +1,39 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">导入岗位</h1>
+  <p class="text-sm text-slate-600 mt-1">用于公众号/Boss/群内转发等渠道的半自动补充。系统不保存全文快照，仅保存结构化字段+短摘要+原文链接。</p>
+
+  <form class="mt-5 bg-white border rounded p-4 space-y-3" method="post" action="/jobs/import">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-slate-600">岗位标题</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="title" required />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">公司(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_name" placeholder="例如: 国家电网/宁德时代/..." />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">城市(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="city" placeholder="北京/上海/广州/深圳" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">发布时间(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_at" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">标签(可选,逗号分隔)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="tags" placeholder="锂电,电池研发,架构设计" />
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">原文链接</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" required />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">短摘要(可选,建议 200-400 字)</label>
+      <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[120px]" name="excerpt"></textarea>
+    </div>
+    <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">入库</button>
+  </form>
+{% endblock %}

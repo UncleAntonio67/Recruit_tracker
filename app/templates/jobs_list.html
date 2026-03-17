@@ -1,0 +1,122 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">岗位</h1>
+      <p class="text-sm text-slate-600 mt-1">每页 200 条，默认按发布时间/最近更新排序。</p>
+    </div>
+    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs/import">导入岗位</a>
+  </div>
+
+  <form class="mt-5 grid grid-cols-1 md:grid-cols-8 gap-3 bg-white border rounded p-4" method="get" action="/jobs">
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">关键词</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">城市</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="city" value="{{ filters.city }}" placeholder="北京/上海/广州/深圳" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">标签</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="tag" value="{{ filters.tag }}" placeholder="新能源,锂电,架构,项目管理..." />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">公司</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="company" value="{{ filters.company }}" placeholder="模糊匹配" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">行业板块</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="industry">
+        <option value="">全部</option>
+        {% for it in options.industries %}
+          <option value="{{ it }}" {% if filters.industry == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">来源</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="source_name">
+        <option value="">全部</option>
+        {% for it in options.source_names %}
+          <option value="{{ it }}" {% if filters.source_name == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">来源类型</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="source_type">
+        <option value="">全部</option>
+        {% for it in options.source_types %}
+          <option value="{{ it }}" {% if filters.source_type == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">时间范围</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="since_days">
+        {% for d in options.since_days %}
+          <option value="{{ d }}" {% if filters.since_days == (d|string) %}selected{% endif %}>近 {{ d }} 天</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">发布时间从</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_from" value="{{ filters.published_from }}" />
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">到</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_to" value="{{ filters.published_to }}" />
+    </div>
+    <div class="md:col-span-8 flex gap-2">
+      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
+      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs">清空</a>
+    </div>
+  </form>
+
+  <div class="mt-5 bg-white border rounded overflow-hidden">
+    <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">
+      <div class="col-span-5">岗位</div>
+      <div class="col-span-3">公司</div>
+      <div class="col-span-2">城市</div>
+      <div class="col-span-2">发布时间</div>
+    </div>
+    {% for it in items %}
+      <a class="block hover:bg-slate-50" href="/jobs/{{ it.job.id }}">
+        <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b">
+          <div class="col-span-5">
+            <div class="font-medium">{{ it.job.title }}</div>
+            <div class="text-xs text-slate-500 mt-1 truncate">
+              标签: {{ (it.job.tags | join(", ")) if it.job.tags else "-" }}
+            </div>
+          </div>
+          <div class="col-span-3 text-slate-700">{{ it.company.name if it.company else "-" }}</div>
+          <div class="col-span-2 text-slate-700">{{ it.job.city or "-" }}</div>
+          <div class="col-span-2 text-slate-600 text-sm">
+            {{ it.job.published_at | fmt_dt('%Y-%m-%d') if it.job.published_at else "-" }}
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+    {% if items|length == 0 %}
+      <div class="px-4 py-8 text-sm text-slate-600">暂无数据。可以先去“导入”页粘贴一个岗位链接或手动录入。</div>
+    {% endif %}
+  </div>
+
+  <div class="mt-4 flex items-center justify-between">
+    <div class="text-sm text-slate-600">第 {{ page }} 页</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ prev_url }}">上一页</a>
+      {% else %}
+        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
+      {% endif %}
+      {% if has_next %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ next_url }}">下一页</a>
+      {% else %}
+        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+

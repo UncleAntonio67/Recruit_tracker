@@ -1,0 +1,93 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">{{ app.title_text }}</h1>
+      <p class="text-sm text-slate-600 mt-1">{{ app.company_text or "未填写公司" }}{% if app.city_text %} · {{ app.city_text }}{% endif %}</p>
+      {% if app.source_url %}
+        <a class="text-sm underline text-slate-800 break-all" href="{{ app.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white border rounded p-4">
+      <h2 class="font-semibold">状态与字段</h2>
+      <form class="mt-3 space-y-3" method="post" action="/applications/{{ app.id }}/update">
+        <div>
+          <label class="block text-xs text-slate-600">阶段</label>
+          <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
+            {% for s in stages %}
+              <option value="{{ s }}" {% if app.stage == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">优先级(1高-5低)</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" type="number" min="1" max="5" name="priority" value="{{ app.priority }}" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">公司</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="company_text" value="{{ app.company_text or '' }}" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">城市</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="city_text" value="{{ app.city_text or '' }}" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">原文链接</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ app.source_url or '' }}" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">渠道</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="channel" value="{{ app.channel or '' }}" />
+        </div>
+        <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">保存</button>
+      </form>
+    </div>
+
+    <div class="md:col-span-2 bg-white border rounded p-4">
+      <h2 class="font-semibold">新增事件</h2>
+      <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3" method="post" action="/applications/{{ app.id }}/events">
+        <div>
+          <label class="block text-xs text-slate-600">类型</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="event_type" placeholder="投递/初面/复面/..." required />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">时间(可选)</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="occurred_at" placeholder="2026-03-15T10:00:00" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">结果(可选)</label>
+          <input class="mt-1 w-full px-3 py-2 border rounded" name="result" placeholder="通过/待定/拒绝" />
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-xs text-slate-600">备注(可选)</label>
+          <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[100px]" name="note"></textarea>
+        </div>
+        <div class="md:col-span-3">
+          <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">添加</button>
+        </div>
+      </form>
+
+      <h2 class="font-semibold mt-6">事件时间线</h2>
+      <div class="mt-3 space-y-3">
+        {% for e in events %}
+          <div class="border rounded p-3">
+            <div class="text-sm font-medium">{{ e.event_type }}</div>
+            <div class="text-xs text-slate-500 mt-1">
+              {% if e.occurred_at %}发生: {{ e.occurred_at }}{% endif %}
+              {% if e.result %} · 结果: {{ e.result }}{% endif %}
+            </div>
+            {% if e.note %}
+              <pre class="mt-2 whitespace-pre-wrap text-sm text-slate-700">{{ e.note }}</pre>
+            {% endif %}
+          </div>
+        {% endfor %}
+        {% if events|length == 0 %}
+          <p class="text-sm text-slate-600">暂无事件记录。</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

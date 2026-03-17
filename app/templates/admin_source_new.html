@@ -1,0 +1,47 @@
+﻿{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">新增采集源</h1>
+  <p class="text-sm text-slate-600 mt-1">优先接入官方/公开入口。无法自动采集的渠道可以用“导入”页快速录入。</p>
+
+  {% if error %}
+    <div class="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">{{ error }}</div>
+  {% endif %}
+
+  <form class="mt-5 bg-white border rounded p-4 space-y-3 max-w-3xl" method="post" action="/admin/sources/new">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-slate-600">类型</label>
+        <select class="mt-1 w-full px-3 py-2 border rounded" name="kind">
+          {% for k in kinds %}
+            <option value="{{ k }}">{{ k }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">名称(唯一)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="name" required />
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <input id="enabled" type="checkbox" name="enabled" value="1" checked />
+      <label for="enabled" class="text-sm text-slate-700">启用</label>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">配置(JSON)</label>
+      <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[240px]" name="config_json">{{ config_json or default_config }}</textarea>
+      <div class="mt-2 text-xs text-slate-500 space-y-1">
+        <div>kuaishou: { "company_name": "快手", "page_size": 50, "max_pages": 60, "proxy": "http://127.0.0.1:7890" }</div>`r`n        <div>tencent: { "company_name": "腾讯", "api_keywords": ["架构","项目管理","新能源","电池"], "max_pages": 12, "page_size": 200, "proxy": "http://127.0.0.1:7890" }</div>`r`n        <div>greenhouse: { "board": "your-board", "company_name": "SomeCorp", "proxy": "http://127.0.0.1:7890" }</div>
+        <div>lever: { "company": "netflix", "company_name": "Netflix", "proxy": "http://127.0.0.1:7890" }</div>
+        <div>rss: { "feed_url": "https://example.com/jobs.rss", "company_name": "SomeCorp", "source_type": "official", "proxy": "http://127.0.0.1:7890" }</div>
+        <div>html_list(实验性): { "list_url": "https://example.com/careers", "company_name": "SomeCorp", "url_contains": ["job","career"], "title_contains": ["架构","项目","电池"], "max_items": 200, "proxy": "http://127.0.0.1:7890" }</div>
+      </div>
+    </div>
+
+    <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">创建</button>
+  </form>
+{% endblock %}
+
+
+
+
+

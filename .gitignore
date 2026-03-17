@@ -1,0 +1,60 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenvs
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files (keep templates tracked separately if you add them)
+.env
+.env.*
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Builds / packaging
+build/
+dist/
+*.egg-info/
+
+# Local databases (local dev only)
+recruit_tracker.db
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
+# Logs
+*.log
+*.out.log
+*.err.log
+
+# Local runtime artifacts
+tmp-uvicorn.*
+local.out.log
+local.err.log
+server.out.log
+server.err.log
+dbg*.out.log
+dbg*.err.log
+*.tmp
+
+# Curl cookie jar accidentally created by some scripts/tools
+-b
+
+# IDEs / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

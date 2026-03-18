@@ -3,36 +3,44 @@
   <h1 class="text-xl font-semibold">导入岗位</h1>
   <p class="text-sm text-slate-600 mt-1">用于公众号/Boss/群内转发等渠道的半自动补充。系统不保存全文快照，仅保存结构化字段+短摘要+原文链接。</p>
 
+  <form class="mt-5 bg-white border rounded p-4 flex flex-col md:flex-row gap-3 md:items-end" method="get" action="/jobs/import">
+    <div class="flex-1">
+      <label class="block text-xs text-slate-600">给一个岗位链接(可选)，系统尝试自动填充</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="url" value="{{ prefill.source_url or '' }}" placeholder="粘贴岗位详情页 URL" />
+    </div>
+    <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">自动填充</button>
+  </form>
+
   <form class="mt-5 bg-white border rounded p-4 space-y-3" method="post" action="/jobs/import">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
         <label class="block text-xs text-slate-600">岗位标题</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="title" required />
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="title" value="{{ prefill.title or '' }}" required />
       </div>
       <div>
         <label class="block text-xs text-slate-600">公司(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_name" placeholder="例如: 国家电网/宁德时代/..." />
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_name" value="{{ prefill.company_name or '' }}" placeholder="例如: 国家电网/宁德时代/..." />
       </div>
       <div>
         <label class="block text-xs text-slate-600">城市(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="city" placeholder="北京/上海/广州/深圳" />
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="city" value="{{ prefill.city or '' }}" placeholder="北京/上海/广州/深圳" />
       </div>
       <div>
         <label class="block text-xs text-slate-600">发布时间(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_at" />
+        <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_at" value="{{ prefill.published_at or '' }}" />
       </div>
       <div>
-        <label class="block text-xs text-slate-600">标签(可选,逗号分隔)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="tags" placeholder="锂电,电池研发,架构设计" />
+        <label class="block text-xs text-slate-600">薪资(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="salary_text" value="{{ prefill.salary_text or '' }}" placeholder="例如 20-40k · 30-50万/年" />
       </div>
     </div>
     <div>
       <label class="block text-xs text-slate-600">原文链接</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" required />
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ prefill.source_url or '' }}" required />
     </div>
     <div>
       <label class="block text-xs text-slate-600">短摘要(可选,建议 200-400 字)</label>
-      <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[120px]" name="excerpt"></textarea>
+      <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[120px]" name="excerpt">{{ prefill.excerpt or '' }}</textarea>
     </div>
     <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">入库</button>
   </form>

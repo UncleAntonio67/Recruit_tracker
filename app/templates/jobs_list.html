@@ -8,18 +8,19 @@
     <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs/import">导入岗位</a>
   </div>
 
-  <form class="mt-5 grid grid-cols-1 md:grid-cols-8 gap-3 bg-white border rounded p-4" method="get" action="/jobs">
+  <form class="mt-5 grid grid-cols-1 md:grid-cols-10 gap-3 bg-white border rounded p-4" method="get" action="/jobs">
     <div class="md:col-span-2">
       <label class="block text-xs text-slate-600">关键词</label>
       <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
     </div>
     <div>
       <label class="block text-xs text-slate-600">城市</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="city" value="{{ filters.city }}" placeholder="北京/上海/广州/深圳" />
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600">标签</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="tag" value="{{ filters.tag }}" placeholder="新能源,锂电,架构,项目管理..." />
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="city">
+        <option value="">全部</option>
+        {% for it in options.cities %}
+          <option value="{{ it }}" {% if filters.city == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div>
       <label class="block text-xs text-slate-600">公司</label>
@@ -60,6 +61,20 @@
         {% endfor %}
       </select>
     </div>
+    <div>
+      <label class="block text-xs text-slate-600">薪资(k/月) 最低</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" type="number" min="0" max="1000" name="salary_min_k" value="{{ filters.salary_min_k }}" placeholder="例如 20" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">最高</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" type="number" min="0" max="1000" name="salary_max_k" value="{{ filters.salary_max_k }}" placeholder="例如 40" />
+    </div>
+    <div class="flex items-end">
+      <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" name="salary_only" value="1" {% if filters.salary_only %}checked{% endif %} />
+        仅看含薪资
+      </label>
+    </div>
     <div class="md:col-span-2">
       <label class="block text-xs text-slate-600">发布时间从</label>
       <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_from" value="{{ filters.published_from }}" />
@@ -68,7 +83,7 @@
       <label class="block text-xs text-slate-600">到</label>
       <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_to" value="{{ filters.published_to }}" />
     </div>
-    <div class="md:col-span-8 flex gap-2">
+    <div class="md:col-span-10 flex gap-2">
       <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
       <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs">清空</a>
     </div>
@@ -86,9 +101,9 @@
         <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b">
           <div class="col-span-5">
             <div class="font-medium">{{ it.job.title }}</div>
-            <div class="text-xs text-slate-500 mt-1 truncate">
-              标签: {{ (it.job.tags | join(", ")) if it.job.tags else "-" }}
-            </div>
+            {% if it.job.salary_text %}
+              <div class="text-xs text-slate-600 mt-1 truncate">薪资: {{ it.job.salary_text }}</div>
+            {% endif %}
           </div>
           <div class="col-span-3 text-slate-700">{{ it.company.name if it.company else "-" }}</div>
           <div class="col-span-2 text-slate-700">{{ it.job.city or "-" }}</div>

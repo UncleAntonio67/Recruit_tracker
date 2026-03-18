@@ -81,6 +81,11 @@ class JobPosting(Base):
     seniority: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Salary info is best-effort; many sources don't provide it.
+    salary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Salary range normalized to "k RMB per month" when parseable (e.g. 20-35k).
+    salary_min_k: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    salary_max_k: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="active", server_default="active", index=True)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

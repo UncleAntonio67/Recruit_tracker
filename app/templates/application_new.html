@@ -7,29 +7,43 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
         <label class="block text-xs text-slate-600">岗位</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="title_text" required />
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="title_text" value="{{ prefill.title_text }}" required />
       </div>
       <div>
         <label class="block text-xs text-slate-600">公司(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_text" />
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_text" value="{{ prefill.company_text }}" />
       </div>
       <div>
         <label class="block text-xs text-slate-600">城市(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="city_text" placeholder="北京/上海/广州/深圳" />
+        <select class="mt-1 w-full px-3 py-2 border rounded" name="city_text">
+          <option value="">不填</option>
+          {% for c in ["北京","上海","广州","深圳","全国","远程"] %}
+            <option value="{{ c }}" {% if prefill.city_text == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div>
-        <label class="block text-xs text-slate-600">渠道(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="channel" placeholder="官网/内推/猎头" />
+        <label class="block text-xs text-slate-600">投递类型/渠道(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="channel" list="channel_options" value="{{ prefill.channel }}" placeholder="选择或输入" />
+        <datalist id="channel_options">
+          {% for ch in channels %}
+            <option value="{{ ch }}"></option>
+          {% endfor %}
+        </datalist>
       </div>
       <div class="md:col-span-2">
         <label class="block text-xs text-slate-600">原文链接(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" />
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ prefill.source_url }}" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">投递时间(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_at" />
       </div>
       <div>
         <label class="block text-xs text-slate-600">阶段</label>
         <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
           {% for s in stages %}
-            <option value="{{ s }}">{{ s }}</option>
+            <option value="{{ s }}" {% if prefill.stage == s %}selected{% endif %}>{{ s }}</option>
           {% endfor %}
         </select>
       </div>

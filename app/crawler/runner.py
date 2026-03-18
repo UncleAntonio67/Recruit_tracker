@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou
 from app.crawler.job_types import RawJob
-from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, is_recent, sha1, utcnow
+from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, find_salary_text, is_recent, parse_salary_k, sha1, utcnow
 from app.models import Company, CrawlSource, JobPosting, JobSource
 
 
@@ -59,6 +59,10 @@ def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | N
     job = db.execute(select(JobPosting).where(JobPosting.fingerprint == fp)).scalar_one_or_none()
     created = False
 
+    # Salary best-effort inference (no guarantees).
+    inferred_salary_text = find_salary_text(raw.excerpt) or find_salary_text(raw.title)
+    mn_k, mx_k = parse_salary_k(inferred_salary_text)
+
     if not job:
         job = JobPosting(
             company_id=comp.id if comp else None,
@@ -69,6 +73,9 @@ def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | N
             seniority=raw.seniority,
             published_at=raw.published_at,
             excerpt=clamp_excerpt(raw.excerpt),
+            salary_text=inferred_salary_text,
+            salary_min_k=mn_k,
+            salary_max_k=mx_k,
             status="active",
             fingerprint=fp,
             first_seen_at=utcnow(),
@@ -86,6 +93,10 @@ def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | N
             job.excerpt = clamp_excerpt(raw.excerpt)
         if not job.published_at and raw.published_at:
             job.published_at = raw.published_at
+        if not job.salary_text and inferred_salary_text:
+            job.salary_text = inferred_salary_text
+            job.salary_min_k = mn_k
+            job.salary_max_k = mx_k
         job.last_seen_at = utcnow()
         db.add(job)
 
@@ -111,6 +122,67 @@ def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | N
 def _passes_filters(raw: RawJob, cfg: dict) -> bool:
     text = f"{raw.title} {raw.excerpt or ''}".lower()
 
+    # Always exclude campus / intern style content to keep "社招" focus.
+    global_exclude = [
+        "校招",
+        "校园",
+        "应届",
+        "实习",
+        "管培",
+        "管培生",
+        "暑期",
+        "春招",
+        "秋招",
+        "毕业生",
+        "实习生",
+    ]
+    if any(k.lower() in text for k in global_exclude):
+        return False
+
+    # Always require "tech-ish" signal to avoid collecting massive irrelevant postings.
+    global_include_any = [
+        # Software / data / infra
+        "开发",
+        "工程师",
+        "软件",
+        "系统",
+        "平台",
+        "后端",
+        "前端",
+        "全栈",
+        "架构",
+        "数据",
+        "大数据",
+        "算法",
+        "测试",
+        "运维",
+        "devops",
+        "sre",
+        "云",
+        "中台",
+        "安全",
+        # Fintech / bank tech
+        "金融科技",
+        "银行",
+        "支付",
+        "风控",
+        "核心系统",
+        # New energy / battery / chemical
+        "新能源",
+        "储能",
+        "锂电",
+        "电池",
+        "电芯",
+        "bms",
+        "电化学",
+        "材料",
+        "化工",
+        "研发",
+        "研究",
+    ]
+    if not any(k.lower() in text for k in global_include_any):
+        return False
+
     include_kws = [str(x).lower() for x in (cfg.get("include_keywords") or []) if str(x).strip()]
     exclude_kws = [str(x).lower() for x in (cfg.get("exclude_keywords") or []) if str(x).strip()]
     city_allow = [str(x).strip() for x in (cfg.get("city_allowlist") or []) if str(x).strip()]
@@ -125,6 +197,77 @@ def _passes_filters(raw: RawJob, cfg: dict) -> bool:
             return False
 
     return True
+
+
+def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
+    created = 0
+    seen = 0
+    err = None
+
+    try:
+        cfg = s.config or {}
+        raw_jobs: list[RawJob]
+
+        if s.kind == "greenhouse":
+            raw_jobs = greenhouse.fetch(board=cfg["board"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
+            src_type = "official"
+        elif s.kind == "lever":
+            raw_jobs = lever.fetch(company=cfg["company"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
+            src_type = "official"
+        elif s.kind == "rss":
+            raw_jobs = rss.fetch(feed_url=cfg["feed_url"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        elif s.kind == "html_list":
+            raw_jobs = html_list.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        elif s.kind == "tencent":
+            raw_jobs = tencent.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        elif s.kind == "kuaishou":
+            raw_jobs = kuaishou.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        elif s.kind == "iguopin":
+            raw_jobs = iguopin.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "aggregator"
+        elif s.kind == "jd":
+            raw_jobs = jd.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        else:
+            raise ValueError(f"unknown kind: {s.kind}")
+
+        for rj in raw_jobs:
+            seen += 1
+            if not _passes_filters(rj, cfg):
+                continue
+            c, _job_id = _ingest_job(
+                db,
+                rj,
+                source_type=src_type,
+                source_name=s.name,
+                since_days=since_days,
+            )
+            if c:
+                created += 1
+
+        s.last_status = "ok"
+        s.last_error = None
+    except Exception as e:
+        err = str(e)
+        s.last_status = "error"
+        s.last_error = err[:500]
+    finally:
+        s.last_run_at = utcnow()
+        db.add(s)
+        db.commit()
+
+    return {
+        "name": s.name,
+        "kind": s.kind,
+        "seen": seen,
+        "created": created,
+        "status": s.last_status,
+        "error": s.last_error,
+    }
 
 
 def run(db: Session, since_days: int = 180, only_enabled: bool = True) -> dict:
@@ -145,81 +288,39 @@ def run(db: Session, since_days: int = 180, only_enabled: bool = True) -> dict:
     }
 
     for s in sources:
-        created = 0
-        seen = 0
-        err = None
-
-        try:
-            cfg = s.config or {}
-            raw_jobs: list[RawJob]
-
-            if s.kind == "greenhouse":
-                raw_jobs = greenhouse.fetch(board=cfg["board"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
-                src_type = "official"
-            elif s.kind == "lever":
-                raw_jobs = lever.fetch(company=cfg["company"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
-                src_type = "official"
-            elif s.kind == "rss":
-                raw_jobs = rss.fetch(feed_url=cfg["feed_url"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
-                src_type = cfg.get("source_type") or "official"
-            elif s.kind == "html_list":
-                raw_jobs = html_list.fetch(cfg, proxy=cfg.get("proxy"))
-                src_type = cfg.get("source_type") or "official"
-            elif s.kind == "tencent":
-                raw_jobs = tencent.fetch(cfg, proxy=cfg.get("proxy"))
-                src_type = cfg.get("source_type") or "official"
-            elif s.kind == "kuaishou":
-                raw_jobs = kuaishou.fetch(cfg, proxy=cfg.get("proxy"))
-                src_type = cfg.get("source_type") or "official"
-            elif s.kind == "iguopin":
-                raw_jobs = iguopin.fetch(cfg, proxy=cfg.get("proxy"))
-                src_type = cfg.get("source_type") or "aggregator"
-            elif s.kind == "jd":
-                raw_jobs = jd.fetch(cfg, proxy=cfg.get("proxy"))
-                src_type = cfg.get("source_type") or "official"
-            else:
-                raise ValueError(f"unknown kind: {s.kind}")
-
-            for rj in raw_jobs:
-                seen += 1
-                if not _passes_filters(rj, cfg):
-                    continue
-                c, _job_id = _ingest_job(
-                    db,
-                    rj,
-                    source_type=src_type,
-                    source_name=s.name,
-                    since_days=since_days,
-                )
-                if c:
-                    created += 1
-
-            s.last_status = "ok"
-            s.last_error = None
-        except Exception as e:
+        res = _run_source(db, s, since_days=since_days)
+        stats["jobs_created"] += int(res.get("created") or 0)
+        stats["jobs_seen"] += int(res.get("seen") or 0)
+        if res.get("status") != "ok":
             stats["errors"] += 1
-            err = str(e)
-            s.last_status = "error"
-            s.last_error = err[:500]
-        finally:
-            s.last_run_at = utcnow()
-            db.add(s)
-            db.commit()
-
-        stats["jobs_created"] += created
-        stats["jobs_seen"] += seen
-        stats["per_source"].append(
-            {
-                "name": s.name,
-                "kind": s.kind,
-                "seen": seen,
-                "created": created,
-                "status": s.last_status,
-                "error": s.last_error,
-            }
-        )
+        stats["per_source"].append(res)
 
     return stats
+
+
+def run_one(db: Session, *, source_id: str, since_days: int = 180) -> dict:
+    s = db.get(CrawlSource, source_id)
+    if not s:
+        return {
+            "sources": 0,
+            "jobs_created": 0,
+            "jobs_seen": 0,
+            "errors": 1,
+            "per_source": [{"name": "-", "kind": "-", "seen": 0, "created": 0, "status": "error", "error": "source not found"}],
+            "since_days": since_days,
+            "ran_at": datetime.now(UTC).isoformat(),
+        }
+
+    res = _run_source(db, s, since_days=since_days)
+    return {
+        "sources": 1,
+        "jobs_created": int(res.get("created") or 0),
+        "jobs_seen": int(res.get("seen") or 0),
+        "errors": 0 if res.get("status") == "ok" else 1,
+        "per_source": [res],
+        "since_days": since_days,
+        "ran_at": datetime.now(UTC).isoformat(),
+    }
 
 
 

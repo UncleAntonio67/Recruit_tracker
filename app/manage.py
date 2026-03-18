@@ -340,6 +340,90 @@ def cmd_import_companies_xlsx(args: argparse.Namespace) -> None:
             pass
 
 
+def cmd_seed_official_html_sources(args: argparse.Namespace) -> None:
+    """Create html_list crawl sources for companies that have recruitment_url set.
+
+    This is best-effort: many official portals are JS-heavy or WAF-protected.
+    """
+
+    proxy = str(args.proxy or "").strip() or None
+    title_contains = [
+        "后端",
+        "前端",
+        "全栈",
+        "开发",
+        "工程师",
+        "架构",
+        "数据",
+        "算法",
+        "测试",
+        "运维",
+        "DevOps",
+        "SRE",
+        "金融科技",
+        "银行",
+        "新能源",
+        "储能",
+        "锂电",
+        "电池",
+        "电化学",
+        "材料",
+        "化工",
+        "研发",
+        "项目",
+        "项目管理",
+    ]
+    url_contains = ["job", "jobs", "career", "careers", "recruit", "zhaopin", "hr", "join"]
+    url_excludes = ["campus", "intern", "xiaozhao", "校园", "校招", "实习"]
+
+    db = SessionLocal()
+    try:
+        companies = (
+            db.execute(
+                select(Company)
+                .where(Company.recruitment_url.is_not(None))
+                .where(Company.recruitment_url != "")
+                .order_by(Company.name.asc())
+            )
+            .scalars()
+            .all()
+        )
+
+        created = 0
+        updated = 0
+        for c in companies:
+            name = c.name
+            src_name = f"Official:{name}"
+            cfg = {
+                "list_url": c.recruitment_url,
+                "company_name": name,
+                "url_contains": url_contains,
+                "url_excludes": url_excludes,
+                "title_contains": title_contains,
+                "max_items": int(args.max_items),
+                "source_type": "official",
+            }
+            if proxy:
+                cfg["proxy"] = proxy
+
+            existing = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
+            if existing:
+                existing.kind = "html_list"
+                existing.enabled = True
+                existing.config = cfg
+                db.add(existing)
+                updated += 1
+            else:
+                s = CrawlSource(kind="html_list", name=src_name, enabled=True, config=cfg)
+                db.add(s)
+                created += 1
+
+        db.commit()
+        print(f"seeded official html sources: created={created} updated={updated} total={created+updated}")
+    finally:
+        db.close()
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -373,6 +457,11 @@ def main() -> None:
     ix.add_argument("--page-size", type=int, default=50)
     ix.add_argument("--city-allowlist", action="store_true", help="Restrict ingestion to 北上广深 (based on city field)")
     ix.set_defaults(fn=cmd_import_companies_xlsx)
+
+    so = sub.add_parser("seed-official-html-sources")
+    so.add_argument("--proxy", default="", help="Optional proxy URL, e.g. http://127.0.0.1:7890")
+    so.add_argument("--max-items", type=int, default=200)
+    so.set_defaults(fn=cmd_seed_official_html_sources)
 
     args = p.parse_args()
     args.fn(args)

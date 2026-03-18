@@ -114,3 +114,76 @@ def is_recent(published_at: datetime | None, since_days: int) -> bool:
     if not published_at:
         return True
     return published_at >= (utcnow() - timedelta(days=since_days))
+
+
+def parse_salary_k(salary_text: str | None) -> tuple[int | None, int | None]:
+    """Parse salary text into (min_k, max_k) where unit is k RMB per month.
+
+    Supported examples:
+    - "20-40k"
+    - "20K-40K"
+    - "2-4万"
+    - "30k"
+
+    Non-goals: yearly packages, stock, bonus months, etc.
+    """
+
+    if not salary_text:
+        return (None, None)
+
+    s = str(salary_text).strip()
+    if not s:
+        return (None, None)
+
+    # Normalize separators
+    s2 = s.replace("～", "-").replace("~", "-").replace("至", "-").replace("—", "-")
+
+    # Range in k
+    m = re.search(r"(\d{1,3})\s*-\s*(\d{1,3})\s*[kK]\b", s2)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return (min(a, b), max(a, b))
+    m = re.search(r"(\d{1,3})\s*[kK]\s*-\s*(\d{1,3})\s*[kK]\b", s2)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return (min(a, b), max(a, b))
+
+    # Range in 万
+    m = re.search(r"(\d{1,2})\s*-\s*(\d{1,2})\s*[万wW]\b", s2)
+    if m:
+        a, b = int(m.group(1)) * 10, int(m.group(2)) * 10
+        return (min(a, b), max(a, b))
+
+    # Single k
+    m = re.search(r"\b(\d{1,3})\s*[kK]\b", s2)
+    if m:
+        v = int(m.group(1))
+        return (v, v)
+
+    # Single 万
+    m = re.search(r"\b(\d{1,2})\s*[万wW]\b", s2)
+    if m:
+        v = int(m.group(1)) * 10
+        return (v, v)
+
+    return (None, None)
+
+
+def find_salary_text(text: str | None) -> str | None:
+    """Extract a salary snippet from a larger text."""
+
+    if not text:
+        return None
+
+    s = str(text)
+    # Prefer explicit ranges first.
+    m = re.search(r"(\d{1,3}\s*[-～~至—]\s*\d{1,3}\s*[kK])", s)
+    if m:
+        return re.sub(r"\s+", "", m.group(1))
+    m = re.search(r"(\d{1,2}\s*[-～~至—]\s*\d{1,2}\s*[万wW])", s)
+    if m:
+        return re.sub(r"\s+", "", m.group(1))
+    m = re.search(r"(\d{1,3}\s*[kK])", s)
+    if m:
+        return re.sub(r"\s+", "", m.group(1))
+    return None

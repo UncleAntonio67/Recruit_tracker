@@ -40,7 +40,7 @@
         <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b">
           <div class="col-span-5 font-medium">{{ a.title_text }}</div>
           <div class="col-span-3 text-slate-700">{{ a.company_text or "-" }}</div>
-          <div class="col-span-2 text-slate-700">{{ a.stage }}</div>
+          <div class="col-span-2 text-slate-700">{{ stage_labels.get(a.stage, a.stage) }}</div>
           <div class="col-span-2 text-slate-700">{{ a.priority }}</div>
         </div>
       </a>

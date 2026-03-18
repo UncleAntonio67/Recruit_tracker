@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import os
 import json
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -68,7 +69,15 @@ def sources_list(
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
     sources = db.execute(select(CrawlSource).order_by(CrawlSource.created_at.desc())).scalars().all()
-    return templates.TemplateResponse("admin_sources.html", {"request": request, "user": admin, "sources": sources})
+    return templates.TemplateResponse(
+        "admin_sources.html",
+        {
+            "request": request,
+            "user": admin,
+            "sources": sources,
+            "crawl_interval_hours": int((os.environ.get("CRAWL_INTERVAL_HOURS") or "0").strip() or 0),
+        },
+    )
 
 
 @router.get("/sources/new", response_class=HTMLResponse)
@@ -143,6 +152,19 @@ def crawl_run_now(
     from app.crawler.runner import run
 
     stats = run(db, since_days=180)
+    return templates.TemplateResponse("admin_crawl_result.html", {"request": request, "user": admin, "stats": stats})
+
+
+@router.post("/sources/{source_id}/run")
+def crawl_run_one(
+    request: Request,
+    source_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> HTMLResponse:
+    from app.crawler.runner import run_one
+
+    stats = run_one(db, source_id=source_id, since_days=180)
     return templates.TemplateResponse("admin_crawl_result.html", {"request": request, "user": admin, "stats": stats})
 
 

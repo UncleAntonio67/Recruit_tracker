@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">{{ company.name }}</h1>
+      <p class="text-sm text-slate-600 mt-1">维护企业信息与官方招聘/网申入口，用于后续配置“官网采集源”。</p>
+    </div>
+    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/companies">返回列表</a>
+  </div>
+
+  <form class="mt-5 bg-white border rounded p-4 space-y-3 max-w-3xl" method="post" action="/companies/{{ company.id }}">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">企业/机构名称</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="name" value="{{ company.name }}" required />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">机构类型</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_type" value="{{ company.company_type or '' }}" placeholder="央企/国企/大厂/银行..." />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">行业板块</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="industry" value="{{ company.industry or '' }}" placeholder="能源与电力/电池与新能源/银行与金融科技..." />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">总部/核心研发地</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="hq_location" value="{{ company.hq_location or '' }}" placeholder="北京/上海/深圳/全国" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">官网</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="website" value="{{ company.website or '' }}" placeholder="https://..." />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">重点招聘方向（技术研发类）</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="focus_directions" value="{{ company.focus_directions or '' }}" placeholder="后端/数据/架构/电池研发/BMS/..." />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">官方招聘网址/网申入口</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded" name="recruitment_url" value="{{ company.recruitment_url or '' }}" placeholder="https://... (尽量填官方入口)" />
+        <p class="text-xs text-slate-500 mt-1">注意: 本系统不保存网页全文快照，仅保存岗位结构化字段+短摘要+原文链接。</p>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">保存</button>
+      {% if company.recruitment_url %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ company.recruitment_url }}" target="_blank" rel="noopener noreferrer">打开网申入口</a>
+      {% endif %}
+    </div>
+  </form>
+{% endblock %}
+

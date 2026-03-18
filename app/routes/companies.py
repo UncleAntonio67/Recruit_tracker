@@ -1,7 +1,7 @@
 ﻿from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
@@ -67,3 +67,54 @@ def companies_list(
             "company_type_options": types,
         },
     )
+
+
+@router.get("/{company_id}", response_class=HTMLResponse)
+def company_detail(
+    request: Request,
+    company_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    c = db.get(Company, company_id)
+    if not c:
+        return templates.TemplateResponse("404.html", {"request": request, "user": user}, status_code=404)
+
+    return templates.TemplateResponse(
+        "company_detail.html",
+        {
+            "request": request,
+            "user": user,
+            "company": c,
+        },
+    )
+
+
+@router.post("/{company_id}")
+def company_update(
+    request: Request,
+    company_id: str,
+    name: str = Form(...),
+    company_type: str | None = Form(default=None),
+    industry: str | None = Form(default=None),
+    hq_location: str | None = Form(default=None),
+    focus_directions: str | None = Form(default=None),
+    website: str | None = Form(default=None),
+    recruitment_url: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> RedirectResponse:
+    c = db.get(Company, company_id)
+    if not c:
+        return RedirectResponse(url="/companies", status_code=302)
+
+    c.name = name.strip()
+    c.company_type = company_type.strip() if company_type and company_type.strip() else None
+    c.industry = industry.strip() if industry and industry.strip() else None
+    c.hq_location = hq_location.strip() if hq_location and hq_location.strip() else None
+    c.focus_directions = focus_directions.strip() if focus_directions and focus_directions.strip() else None
+    c.website = website.strip() if website and website.strip() else None
+    c.recruitment_url = recruitment_url.strip() if recruitment_url and recruitment_url.strip() else None
+    db.add(c)
+    db.commit()
+    return RedirectResponse(url=f"/companies/{c.id}", status_code=302)

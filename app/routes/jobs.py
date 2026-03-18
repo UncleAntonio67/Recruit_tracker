@@ -8,7 +8,8 @@ from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
-from app.crawler.utils import KEYWORD_TAGS, parse_dt
+from app.crawler.utils import find_salary_text, parse_dt, parse_salary_k
+from app.crawler.prefill import prefill_from_url
 from app.db import get_db
 from app.models import Application, Company, JobPosting, JobSource, User
 from app.views import templates
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 def _company_query_tokens(text: str) -> list[str]:
     """Expand common group suffix variants to improve matching.
 
-    Example: user inputs "中核集团", postings may use "中核..." subsidiaries.
+    Keep Chinese literals as unicode escapes to avoid Windows console encoding pitfalls.
     """
 
     s = (text or "").strip()
@@ -27,15 +28,24 @@ def _company_query_tokens(text: str) -> list[str]:
         return []
 
     toks = [s]
-    for suf in ["集团有限公司", "集团股份有限公司", "集团", "有限公司", "股份有限公司"]:
+    suffixes = [
+        "\u96c6\u56e2\u6709\u9650\u516c\u53f8",  # 集团有限公司
+        "\u96c6\u56e2\u80a1\u4efd\u6709\u9650\u516c\u53f8",  # 集团股份有限公司
+        "\u96c6\u56e2",  # 集团
+        "\u6709\u9650\u516c\u53f8",  # 有限公司
+        "\u80a1\u4efd\u6709\u9650\u516c\u53f8",  # 股份有限公司
+    ]
+    for suf in suffixes:
         if s.endswith(suf) and len(s) > len(suf):
             toks.append(s[: -len(suf)].strip())
             break
 
-    # Strip common bracket aliases: "一汽（红旗）" -> "一汽", "红旗"
-    if "（" in s and "）" in s:
-        left = s.split("（", 1)[0].strip()
-        mid = s.split("（", 1)[1].split("）", 1)[0].strip()
+    # "一汽（红旗）" -> "一汽", "红旗"
+    lpar = "\uff08"  # （
+    rpar = "\uff09"  # ）
+    if lpar in s and rpar in s:
+        left = s.split(lpar, 1)[0].strip()
+        mid = s.split(lpar, 1)[1].split(rpar, 1)[0].strip()
         if left:
             toks.append(left)
         if mid:
@@ -45,13 +55,37 @@ def _company_query_tokens(text: str) -> list[str]:
     out: list[str] = []
     for t in toks:
         tt = t.strip()
-        if not tt:
-            continue
-        if tt in seen:
+        if not tt or tt in seen:
             continue
         seen.add(tt)
         out.append(tt)
     return out
+
+
+def _city_options(db: Session) -> list[str]:
+    city_rows = db.execute(
+        select(JobPosting.city, func.count(JobPosting.id))
+        .where(JobPosting.city.is_not(None))
+        .group_by(JobPosting.city)
+        .order_by(func.count(JobPosting.id).desc())
+        .limit(300)
+    ).all()
+    counts: dict[str, int] = {}
+    for raw_city, n in city_rows:
+        if not raw_city:
+            continue
+        s = str(raw_city).strip()
+        if not s:
+            continue
+        for part in s.replace(",", "/").replace("\uff0c", "/").split("/"):
+            c = part.strip()
+            if not c or len(c) > 20:
+                continue
+            counts[c] = counts.get(c, 0) + int(n or 1)
+
+    preferred = ["北京", "上海", "广州", "深圳"]
+    others = sorted([c for c in counts.keys() if c not in preferred], key=lambda x: (-counts.get(x, 0), x))
+    return preferred + others[:40]
 
 
 @router.get("", response_class=HTMLResponse)
@@ -61,7 +95,6 @@ def jobs_list(
     user: User = Depends(get_current_user),
     q: str | None = Query(default=None),
     city: str | None = Query(default=None),
-    tag: str | None = Query(default=None),
     company: str | None = Query(default=None),
     industry: str | None = Query(default=None),
     source_name: str | None = Query(default=None),
@@ -69,13 +102,15 @@ def jobs_list(
     since_days: int = Query(default=180, ge=1, le=3650),
     published_from: str | None = Query(default=None),
     published_to: str | None = Query(default=None),
+    salary_min_k: int | None = Query(default=None, ge=0, le=1000),
+    salary_max_k: int | None = Query(default=None, ge=0, le=1000),
+    salary_only: int | None = Query(default=None),
     page: int = Query(default=1, ge=1, le=5000),
 ) -> HTMLResponse:
     page_size = 200
 
-    # Tag filtering stays in Python for SQLite portability.
     fetch_cap = 2000
-    fetch_limit = min(fetch_cap, max(page_size, page * page_size * (3 if tag else 1)) + 1)
+    fetch_limit = min(fetch_cap, max(page_size, page * page_size) + 1)
 
     stmt = (
         select(JobPosting, Company)
@@ -118,46 +153,37 @@ def jobs_list(
     if source_name:
         sn = source_name.strip()
         if sn:
-            conds.append(
-                exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_name == sn)))
-            )
+            conds.append(exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_name == sn))))
     if source_type:
         st = source_type.strip()
         if st:
-            conds.append(
-                exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_type == st)))
+            conds.append(exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_type == st))))
+
+    # Salary filtering (k RMB/month). Many sources won't have salaries, so these are optional filters.
+    if salary_only:
+        conds.append(or_(JobPosting.salary_min_k.is_not(None), JobPosting.salary_max_k.is_not(None), JobPosting.salary_text.is_not(None)))
+    if salary_min_k is not None:
+        v = int(salary_min_k)
+        conds.append(
+            or_(
+                and_(JobPosting.salary_min_k.is_not(None), JobPosting.salary_min_k >= v),
+                and_(JobPosting.salary_max_k.is_not(None), JobPosting.salary_max_k >= v),
             )
+        )
+    if salary_max_k is not None:
+        v = int(salary_max_k)
+        conds.append(
+            or_(
+                and_(JobPosting.salary_min_k.is_not(None), JobPosting.salary_min_k <= v),
+                and_(JobPosting.salary_max_k.is_not(None), JobPosting.salary_max_k <= v),
+            )
+        )
 
     if conds:
         stmt = stmt.where(and_(*conds))
 
     rows = db.execute(stmt).all()
     items = [{"job": job, "company": comp} for job, comp in rows]
-
-    # Tag filtering is done in Python for SQLite portability.
-    if tag:
-        known_tag_keys = {t for t, _kws in KEYWORD_TAGS}
-        parts = [x.strip() for x in (tag or "").replace("，", ",").split(",") if x.strip()]
-
-        def _resolve_tag_key(token: str) -> str:
-            tok = token.strip()
-            if not tok:
-                return ""
-            low = tok.lower()
-            if tok in known_tag_keys:
-                return tok
-            if low in known_tag_keys:
-                return low
-            for tag_key, kws in KEYWORD_TAGS:
-                for kw in kws:
-                    if low == str(kw).strip().lower():
-                        return tag_key
-            return tok
-
-        want = [_resolve_tag_key(p) for p in parts]
-        want = [w for w in want if w]
-        if want:
-            items = [it for it in items if any(w in (it["job"].tags or []) for w in want)]
 
     start = (page - 1) * page_size
     page_items = items[start : start + page_size]
@@ -182,7 +208,6 @@ def jobs_list(
             "filters": {
                 "q": q or "",
                 "city": city or "",
-                "tag": tag or "",
                 "company": company or "",
                 "industry": industry or "",
                 "source_name": source_name or "",
@@ -190,11 +215,15 @@ def jobs_list(
                 "since_days": str(since_days or ""),
                 "published_from": published_from or "",
                 "published_to": published_to or "",
+                "salary_min_k": "" if salary_min_k is None else str(salary_min_k),
+                "salary_max_k": "" if salary_max_k is None else str(salary_max_k),
+                "salary_only": "1" if salary_only else "",
             },
             "options": {
                 "industries": industries,
                 "source_names": source_names,
                 "source_types": source_types,
+                "cities": _city_options(db),
                 "since_days": [7, 30, 90, 180, 365, 730],
             },
             "page": page,
@@ -209,9 +238,16 @@ def jobs_list(
 @router.get("/import", response_class=HTMLResponse)
 def import_page(
     request: Request,
+    url: str | None = Query(default=None),
     user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    return templates.TemplateResponse("import_job.html", {"request": request, "user": user})
+    prefill = {}
+    if url and str(url).strip():
+        try:
+            prefill = prefill_from_url(str(url).strip())
+        except Exception:
+            prefill = {"source_url": str(url).strip()}
+    return templates.TemplateResponse("import_job.html", {"request": request, "user": user, "prefill": prefill})
 
 
 @router.post("/import")
@@ -220,7 +256,7 @@ def import_post(
     title: str = Form(...),
     city: str | None = Form(default=None),
     company_name: str | None = Form(default=None),
-    tags: str | None = Form(default=None),
+    salary_text: str | None = Form(default=None),
     source_url: str = Form(...),
     published_at: str | None = Form(default=None),
     excerpt: str | None = Form(default=None),
@@ -236,21 +272,27 @@ def import_post(
     comp = None
     if company_name:
         name = company_name.strip()
-        comp = db.execute(select(Company).where(Company.name == name)).scalar_one_or_none()
-        if not comp:
-            comp = Company(name=name)
-            db.add(comp)
-            db.flush()
+        if name:
+            comp = db.execute(select(Company).where(Company.name == name)).scalar_one_or_none()
+            if not comp:
+                comp = Company(name=name)
+                db.add(comp)
+                db.flush()
 
     job = JobPosting(
         company_id=comp.id if comp else None,
         title=title.strip(),
         city=city.strip() if city else None,
-        tags=[t.strip() for t in (tags or "").split(",") if t.strip()],
+        salary_text=(salary_text.strip() if salary_text and salary_text.strip() else None),
         published_at=parse_dt(published_at) if published_at else None,
         excerpt=(excerpt.strip()[:600] if excerpt else None),
         status="active",
     )
+    # Normalize salary fields when possible.
+    if job.salary_text:
+        mn, mx = parse_salary_k(job.salary_text)
+        job.salary_min_k = mn
+        job.salary_max_k = mx
     db.add(job)
     db.flush()
 
@@ -309,7 +351,7 @@ def create_application_from_job(
         city_text=job.city,
         source_url=src_url,
         channel=channel.strip() if channel else None,
-        stage="not_applied",
+        stage="未投递",
         priority=3,
     )
     db.add(app)

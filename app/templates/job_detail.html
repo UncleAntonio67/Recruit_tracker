@@ -7,10 +7,8 @@
         {{ company.name if company else "未关联公司" }}
         {% if job.city %} · {{ job.city }}{% endif %}
         {% if job.published_at %} · 发布: {{ job.published_at | fmt_dt('%Y-%m-%d') }}{% endif %}
+        {% if job.salary_text %} · 薪资: {{ job.salary_text }}{% endif %}
       </p>
-      {% if job.tags and job.tags|length > 0 %}
-        <p class="mt-2 text-sm text-slate-700">标签: {{ job.tags | join(", ") }}</p>
-      {% endif %}
     </div>
     <form class="flex items-end gap-2" method="post" action="/jobs/{{ job.id }}/apply">
       <div>
@@ -31,7 +29,17 @@
       {% endif %}
     </div>
     <div class="bg-white border rounded p-4">
-      <h2 class="font-semibold">来源</h2>
+      <h2 class="font-semibold">信息</h2>
+      <div class="mt-2 text-sm text-slate-700 space-y-1">
+        <div><span class="text-slate-500">公司:</span> {{ company.name if company else "-" }}</div>
+        <div><span class="text-slate-500">城市:</span> {{ job.city or "-" }}</div>
+        <div><span class="text-slate-500">部门:</span> {{ job.department or "-" }}</div>
+        <div><span class="text-slate-500">级别/年限:</span> {{ job.seniority or "-" }}</div>
+        <div><span class="text-slate-500">发布:</span> {{ job.published_at | fmt_dt('%Y-%m-%d') if job.published_at else "-" }}</div>
+        <div><span class="text-slate-500">最近更新:</span> {{ job.last_seen_at | fmt_dt('%Y-%m-%d') if job.last_seen_at else "-" }}</div>
+      </div>
+
+      <h2 class="font-semibold mt-5">来源</h2>
       <ul class="mt-2 space-y-2">
         {% for s in sources %}
           <li class="text-sm">

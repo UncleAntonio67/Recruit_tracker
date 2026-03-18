@@ -334,7 +334,11 @@ def main() -> None:
     ls.set_defaults(fn=cmd_list_sources)
 
     ad = sub.add_parser("add-source")
-    ad.add_argument("--kind", required=True, choices=["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list"])
+    ad.add_argument(
+        "--kind",
+        required=True,
+        choices=["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list", "url_list"],
+    )
     ad.add_argument("--name", required=True)
     ad.add_argument("--disabled", action="store_true")
     ad.add_argument("--config-json", default="{}")

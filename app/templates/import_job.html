@@ -44,4 +44,20 @@
     </div>
     <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">入库</button>
   </form>
+
+  <div class="mt-6 bg-white border rounded p-4">
+    <h2 class="font-semibold">批量导入(粘贴多个链接)</h2>
+    <p class="text-sm text-slate-600 mt-1">一行一个 URL。默认会过滤校招/实习以及明显无关岗位，避免数据过多。</p>
+    <form class="mt-3 space-y-3" method="post" action="/jobs/import/batch">
+      <div>
+        <label class="block text-xs text-slate-600">链接列表</label>
+        <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[160px]" name="urls_text" placeholder="https://...\nhttps://..."></textarea>
+      </div>
+      <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" name="strict" value="1" checked />
+        仅导入相关岗位(推荐)
+      </label>
+      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">开始导入</button>
+    </form>
+  </div>
 {% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">导入结果</h1>
+      <p class="text-sm text-slate-600 mt-1">
+        created={{ created|length }} · skipped={{ skipped|length }} · errors={{ errors|length }}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs/import">继续导入</a>
+      <a class="text-sm px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" href="/jobs">查看岗位</a>
+    </div>
+  </div>
+
+  {% if created|length > 0 %}
+    <div class="mt-5 bg-white border rounded overflow-hidden">
+      <div class="px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">已创建</div>
+      {% for it in created %}
+        <a class="block px-4 py-3 border-b hover:bg-slate-50" href="/jobs/{{ it.id }}">
+          <div class="font-medium">{{ it.title }}</div>
+          <div class="text-xs text-slate-500 break-all mt-1">{{ it.url }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if errors|length > 0 %}
+    <div class="mt-5 bg-white border rounded overflow-hidden">
+      <div class="px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">错误</div>
+      {% for it in errors %}
+        <div class="px-4 py-3 border-b">
+          <div class="text-sm break-all">{{ it.url }}</div>
+          <div class="text-xs text-red-700 mt-1">{{ it.error }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if skipped|length > 0 %}
+    <div class="mt-5 bg-white border rounded overflow-hidden">
+      <div class="px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">已跳过(重复/不相关/无法解析)</div>
+      <div class="px-4 py-3 text-xs text-slate-600 space-y-1">
+        {% for u in skipped[:200] %}
+          <div class="break-all">{{ u }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+

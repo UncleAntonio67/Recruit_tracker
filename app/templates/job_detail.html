@@ -43,8 +43,15 @@
       <ul class="mt-2 space-y-2">
         {% for s in sources %}
           <li class="text-sm">
-            <div class="text-slate-600">{{ s.source_type }}{% if s.source_name %} · {{ s.source_name }}{% endif %}</div>
-            <a class="text-slate-900 underline break-all" href="{{ s.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
+            <div class="text-slate-600">
+              {{ s.source_type }}
+              {% if s.source_kind %} · {{ s.source_kind }}{% endif %}
+              {% if s.source_name %} · {{ s.source_name }}{% endif %}
+            </div>
+            <div class="mt-1 flex items-center gap-3 flex-wrap">
+              <a class="text-slate-900 underline break-all" href="{{ s.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
+              <a class="text-xs text-slate-600 underline" href="https://www.baidu.com/s?wd={{ (company.name if company else '') ~ ' ' ~ job.title }}" target="_blank" rel="noreferrer">打不开? 搜索</a>
+            </div>
           </li>
         {% endfor %}
       </ul>

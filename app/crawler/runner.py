@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou
+from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou, url_list
 from app.crawler.job_types import RawJob
 from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, find_salary_text, is_recent, parse_salary_k, sha1, utcnow
 from app.models import Company, CrawlSource, JobPosting, JobSource
@@ -28,7 +28,14 @@ def _upsert_company(db: Session, name: str | None) -> Company | None:
     return c
 
 
-def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | None, since_days: int) -> tuple[bool, str]:
+def _ingest_job(
+    db: Session,
+    raw: RawJob,
+    source_type: str,
+    source_name: str | None,
+    source_kind: str | None,
+    since_days: int,
+) -> tuple[bool, str]:
     """Returns (created_new, job_id)."""
 
     if not raw.source_url or not raw.title:
@@ -48,6 +55,8 @@ def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | N
             db.add(job)
         existing_src.fetched_at = utcnow()
         existing_src.content_hash = sha1((raw.excerpt or "") + (raw.title or ""))
+        if not existing_src.source_kind and source_kind:
+            existing_src.source_kind = source_kind
         db.add(existing_src)
         db.commit()
         return (False, existing_src.job_posting_id)
@@ -108,6 +117,7 @@ def _ingest_job(db: Session, raw: RawJob, source_type: str, source_name: str | N
     js = JobSource(
         job_posting_id=job.id,
         source_type=source_type,
+        source_kind=source_kind,
         source_name=source_name,
         source_url=src_url,
         fetched_at=utcnow(),
@@ -232,22 +242,26 @@ def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
         elif s.kind == "jd":
             raw_jobs = jd.fetch(cfg, proxy=cfg.get("proxy"))
             src_type = cfg.get("source_type") or "official"
+        elif s.kind == "url_list":
+            raw_jobs = url_list.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "import"
         else:
             raise ValueError(f"unknown kind: {s.kind}")
 
-        for rj in raw_jobs:
-            seen += 1
-            if not _passes_filters(rj, cfg):
-                continue
-            c, _job_id = _ingest_job(
-                db,
-                rj,
-                source_type=src_type,
-                source_name=s.name,
-                since_days=since_days,
-            )
-            if c:
-                created += 1
+            for rj in raw_jobs:
+                seen += 1
+                if not _passes_filters(rj, cfg):
+                    continue
+                c, _job_id = _ingest_job(
+                    db,
+                    rj,
+                    source_type=src_type,
+                    source_name=s.name,
+                    source_kind=s.kind,
+                    since_days=since_days,
+                )
+                if c:
+                    created += 1
 
         s.last_status = "ok"
         s.last_error = None

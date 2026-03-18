@@ -30,10 +30,13 @@
       <label class="block text-xs text-slate-600">配置(JSON)</label>
       <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[240px]" name="config_json">{{ config_json or default_config }}</textarea>
       <div class="mt-2 text-xs text-slate-500 space-y-1">
-        <div>kuaishou: { "company_name": "快手", "page_size": 50, "max_pages": 60, "proxy": "http://127.0.0.1:7890" }</div>`r`n        <div>tencent: { "company_name": "腾讯", "api_keywords": ["架构","项目管理","新能源","电池"], "max_pages": 12, "page_size": 200, "proxy": "http://127.0.0.1:7890" }</div>`r`n        <div>greenhouse: { "board": "your-board", "company_name": "SomeCorp", "proxy": "http://127.0.0.1:7890" }</div>
+        <div>kuaishou: { "company_name": "快手", "page_size": 50, "max_pages": 60, "proxy": "http://127.0.0.1:7890" }</div>
+        <div>tencent: { "company_name": "腾讯", "api_keywords": ["架构","项目管理","新能源","电池"], "max_pages": 12, "page_size": 200, "proxy": "http://127.0.0.1:7890" }</div>
+        <div>greenhouse: { "board": "your-board", "company_name": "SomeCorp", "proxy": "http://127.0.0.1:7890" }</div>
         <div>lever: { "company": "netflix", "company_name": "Netflix", "proxy": "http://127.0.0.1:7890" }</div>
         <div>rss: { "feed_url": "https://example.com/jobs.rss", "company_name": "SomeCorp", "source_type": "official", "proxy": "http://127.0.0.1:7890" }</div>
         <div>html_list(实验性): { "list_url": "https://example.com/careers", "company_name": "SomeCorp", "url_contains": ["job","career"], "title_contains": ["架构","项目","电池"], "max_items": 200, "proxy": "http://127.0.0.1:7890" }</div>
+        <div>url_list(合规跟踪): { "urls": ["https://.../job/123","https://.../job/456"], "source_type": "import", "proxy": "http://127.0.0.1:7890" }</div>
       </div>
     </div>
 

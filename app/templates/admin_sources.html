@@ -13,8 +13,13 @@
       </p>
     </div>
     <div class="flex gap-2">
-      <form action="/admin/crawl/run" method="post">
-        <button class="text-sm px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">立即采集(180天)</button>
+      <form action="/admin/crawl/run" method="post" class="flex gap-2 items-center">
+        <select class="text-sm px-3 py-2 rounded border bg-white" name="since_days">
+          {% for d in [30, 90, 180, 365] %}
+            <option value="{{ d }}" {% if d == 180 %}selected{% endif %}>近 {{ d }} 天</option>
+          {% endfor %}
+        </select>
+        <button class="text-sm px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">立即采集</button>
       </form>
       <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/admin/sources/new">新增采集源</a>
     </div>
@@ -34,7 +39,11 @@
         <div class="col-span-2 text-sm text-slate-700">{{ s.kind }}</div>
         <div class="col-span-4">
           <div class="text-sm font-medium">{{ s.name }}</div>
-          <div class="text-xs text-slate-500">last: {{ s.last_run_at or "-" }} · {{ s.last_status or "-" }}</div>
+          <div class="text-xs text-slate-500">
+            last:
+            {% if s.last_run_at %}{{ s.last_run_at | fmt_dt('%Y-%m-%d %H:%M') }}{% else %}-{% endif %}
+            · {{ s.last_status or "-" }}
+          </div>
           {% if s.last_error %}
             <div class="text-xs text-red-700 mt-1 truncate">{{ s.last_error }}</div>
           {% endif %}
@@ -43,6 +52,7 @@
         <div class="col-span-2">
           <div class="flex flex-col gap-2">
             <form action="/admin/sources/{{ s.id }}/run" method="post">
+              <input type="hidden" name="since_days" value="180" />
               <button class="text-sm px-3 py-1 rounded bg-slate-900 text-white hover:bg-slate-800 w-full" type="submit">采集此源</button>
             </form>
             <form action="/admin/sources/{{ s.id }}/toggle" method="post">

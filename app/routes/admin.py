@@ -85,7 +85,7 @@ def sources_new_page(
     request: Request,
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
-    kinds = ["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list"]
+    kinds = ["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list", "url_list"]
     default_config = '{\n  "company_name": "",\n  "...": ""\n}'
     return templates.TemplateResponse(
         "admin_source_new.html",
@@ -106,7 +106,7 @@ def sources_new_post(
     try:
         cfg = json.loads(config_json) if config_json.strip() else {}
     except Exception:
-        kinds = ["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list"]
+        kinds = ["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list", "url_list"]
         return templates.TemplateResponse(
             "admin_source_new.html",
             {"request": request, "user": admin, "kinds": kinds, "error": "config_json 不是合法 JSON", "config_json": config_json},
@@ -115,7 +115,7 @@ def sources_new_post(
 
     exists = db.execute(select(CrawlSource).where(CrawlSource.name == name.strip())).scalar_one_or_none()
     if exists:
-        kinds = ["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list"]
+        kinds = ["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list", "url_list"]
         return templates.TemplateResponse(
             "admin_source_new.html",
             {"request": request, "user": admin, "kinds": kinds, "error": "名称已存在", "config_json": config_json},
@@ -146,12 +146,13 @@ def sources_toggle(
 @router.post("/crawl/run")
 def crawl_run_now(
     request: Request,
+    since_days: int = Form(default=180),
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
     from app.crawler.runner import run
 
-    stats = run(db, since_days=180)
+    stats = run(db, since_days=int(since_days))
     return templates.TemplateResponse("admin_crawl_result.html", {"request": request, "user": admin, "stats": stats})
 
 
@@ -159,12 +160,13 @@ def crawl_run_now(
 def crawl_run_one(
     request: Request,
     source_id: str,
+    since_days: int = Form(default=180),
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
     from app.crawler.runner import run_one
 
-    stats = run_one(db, source_id=source_id, since_days=180)
+    stats = run_one(db, source_id=source_id, since_days=int(since_days))
     return templates.TemplateResponse("admin_crawl_result.html", {"request": request, "user": admin, "stats": stats})
 
 

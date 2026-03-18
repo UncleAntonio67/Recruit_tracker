@@ -99,6 +99,7 @@ def jobs_list(
     industry: str | None = Query(default=None),
     source_name: str | None = Query(default=None),
     source_type: str | None = Query(default=None),
+    source_kind: str | None = Query(default=None),
     since_days: int = Query(default=180, ge=1, le=3650),
     published_from: str | None = Query(default=None),
     published_to: str | None = Query(default=None),
@@ -158,6 +159,10 @@ def jobs_list(
         st = source_type.strip()
         if st:
             conds.append(exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_type == st))))
+    if source_kind:
+        sk = source_kind.strip()
+        if sk:
+            conds.append(exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_kind == sk))))
 
     # Salary filtering (k RMB/month). Many sources won't have salaries, so these are optional filters.
     if salary_only:
@@ -198,6 +203,8 @@ def jobs_list(
     source_names = sorted([x for x in source_names if x])
     source_types = [r[0] for r in db.execute(select(JobSource.source_type).where(JobSource.source_type.is_not(None)).distinct()).all()]
     source_types = sorted([x for x in source_types if x])
+    source_kinds = [r[0] for r in db.execute(select(JobSource.source_kind).where(JobSource.source_kind.is_not(None)).distinct()).all()]
+    source_kinds = sorted([x for x in source_kinds if x])
 
     return templates.TemplateResponse(
         "jobs_list.html",
@@ -212,6 +219,7 @@ def jobs_list(
                 "industry": industry or "",
                 "source_name": source_name or "",
                 "source_type": source_type or "",
+                "source_kind": source_kind or "",
                 "since_days": str(since_days or ""),
                 "published_from": published_from or "",
                 "published_to": published_to or "",
@@ -223,6 +231,7 @@ def jobs_list(
                 "industries": industries,
                 "source_names": source_names,
                 "source_types": source_types,
+                "source_kinds": source_kinds,
                 "cities": _city_options(db),
                 "since_days": [7, 30, 90, 180, 365, 730],
             },
@@ -299,6 +308,7 @@ def import_post(
     src = JobSource(
         job_posting_id=job.id,
         source_type="import",
+        source_kind="import",
         source_name="manual",
         source_url=src_url,
     )
@@ -306,6 +316,142 @@ def import_post(
     db.commit()
 
     return RedirectResponse(url=f"/jobs/{job.id}", status_code=302)
+
+
+def _is_relevant_import(title: str, excerpt: str | None) -> bool:
+    text = f"{title} {excerpt or ''}".lower()
+
+    # Exclude campus style.
+    for bad in ["校招", "校园", "应届", "实习", "管培", "春招", "秋招", "毕业生", "实习生"]:
+        if bad.lower() in text:
+            return False
+
+    # Require some signal.
+    must_any = [
+        "开发",
+        "工程师",
+        "软件",
+        "系统",
+        "平台",
+        "后端",
+        "前端",
+        "全栈",
+        "架构",
+        "数据",
+        "大数据",
+        "算法",
+        "测试",
+        "运维",
+        "devops",
+        "sre",
+        "云",
+        "中台",
+        "安全",
+        "金融科技",
+        "银行",
+        "支付",
+        "风控",
+        "核心系统",
+        "新能源",
+        "储能",
+        "锂电",
+        "电池",
+        "电芯",
+        "bms",
+        "电化学",
+        "材料",
+        "化工",
+        "研发",
+        "研究",
+    ]
+    return any(k.lower() in text for k in must_any)
+
+
+@router.post("/import/batch", response_class=HTMLResponse)
+def import_batch(
+    request: Request,
+    urls_text: str = Form(...),
+    strict: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> HTMLResponse:
+    urls = []
+    for line in (urls_text or "").splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        # strip common leading bullets
+        s = s.lstrip("-* \t")
+        if s.startswith("http://") or s.startswith("https://"):
+            urls.append(s)
+
+    created: list[dict] = []
+    skipped: list[str] = []
+    errors: list[dict] = []
+    strict_mode = bool(strict)
+
+    for u in urls[:200]:
+        try:
+            info = prefill_from_url(u)
+            title = (info.get("title") or "").strip()
+            excerpt = info.get("excerpt")
+            if not title:
+                skipped.append(u)
+                continue
+            if strict_mode and not _is_relevant_import(title, excerpt):
+                skipped.append(u)
+                continue
+
+            existing = db.execute(select(JobSource).where(JobSource.source_url == u)).scalar_one_or_none()
+            if existing:
+                skipped.append(u)
+                continue
+
+            comp = None
+            comp_name = (info.get("company_name") or "").strip()
+            if comp_name:
+                comp = db.execute(select(Company).where(Company.name == comp_name)).scalar_one_or_none()
+                if not comp:
+                    comp = Company(name=comp_name)
+                    db.add(comp)
+                    db.flush()
+
+            salary_text = info.get("salary_text")
+            mn, mx = parse_salary_k(salary_text)
+
+            job = JobPosting(
+                company_id=comp.id if comp else None,
+                title=title,
+                city=(info.get("city") or None),
+                salary_text=salary_text,
+                salary_min_k=mn,
+                salary_max_k=mx,
+                published_at=parse_dt(info.get("published_at")) if info.get("published_at") else None,
+                excerpt=(excerpt[:600] if isinstance(excerpt, str) else None),
+                status="active",
+            )
+            db.add(job)
+            db.flush()
+
+            src = JobSource(
+                job_posting_id=job.id,
+                source_type="import",
+                source_kind="import",
+                source_name="batch",
+                source_url=u,
+            )
+            db.add(src)
+            db.commit()
+
+            created.append({"id": job.id, "title": job.title, "url": u})
+        except Exception as e:
+            db.rollback()
+            errors.append({"url": u, "error": str(e)})
+
+    return templates.TemplateResponse(
+        "jobs_import_result.html",
+        {"request": request, "user": user, "created": created, "skipped": skipped, "errors": errors},
+    )
 
 
 @router.get("/{job_id}", response_class=HTMLResponse)

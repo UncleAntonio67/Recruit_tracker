@@ -8,7 +8,7 @@
     <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs/import">导入岗位</a>
   </div>
 
-  <form class="mt-5 grid grid-cols-1 md:grid-cols-10 gap-3 bg-white border rounded p-4" method="get" action="/jobs">
+  <form class="mt-5 grid grid-cols-1 md:grid-cols-12 gap-3 bg-white border rounded p-4" method="get" action="/jobs">
     <div class="md:col-span-2">
       <label class="block text-xs text-slate-600">关键词</label>
       <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
@@ -54,6 +54,15 @@
       </select>
     </div>
     <div>
+      <label class="block text-xs text-slate-600">采集渠道</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="source_kind">
+        <option value="">全部</option>
+        {% for it in options.source_kinds %}
+          <option value="{{ it }}" {% if filters.source_kind == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
       <label class="block text-xs text-slate-600">时间范围</label>
       <select class="mt-1 w-full px-3 py-2 border rounded" name="since_days">
         {% for d in options.since_days %}
@@ -83,7 +92,7 @@
       <label class="block text-xs text-slate-600">到</label>
       <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_to" value="{{ filters.published_to }}" />
     </div>
-    <div class="md:col-span-10 flex gap-2">
+    <div class="md:col-span-12 flex gap-2">
       <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
       <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/jobs">清空</a>
     </div>

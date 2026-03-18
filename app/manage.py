@@ -7,7 +7,7 @@ from pathlib import Path
 from sqlalchemy import select
 
 from app.db import SessionLocal
-from app.models import Company, CrawlSource, User
+from app.models import Company, CrawlSource, JobSource, User
 from app.security import hash_password
 
 
@@ -424,6 +424,42 @@ def cmd_seed_official_html_sources(args: argparse.Namespace) -> None:
         db.close()
 
 
+def cmd_backfill_job_source_kind(args: argparse.Namespace) -> None:
+    """Best-effort backfill for JobSource.source_kind on existing data."""
+
+    db = SessionLocal()
+    try:
+        rows = db.execute(select(JobSource).where(JobSource.source_kind.is_(None))).scalars().all()
+        updated = 0
+        for js in rows:
+            name = (js.source_name or "").strip()
+            st = (js.source_type or "").strip()
+
+            kind = None
+            if st == "import":
+                kind = "import"
+            elif name.lower() == "tencent":
+                kind = "tencent"
+            elif name.lower() == "kuaishou":
+                kind = "kuaishou"
+            elif name.lower() == "jd":
+                kind = "jd"
+            elif name.lower().startswith("guopin"):
+                kind = "iguopin"
+            elif name.lower().startswith("official:"):
+                kind = "html_list"
+
+            if kind:
+                js.source_kind = kind
+                db.add(js)
+                updated += 1
+
+        db.commit()
+        print(f"backfilled job_sources.source_kind: updated={updated} scanned={len(rows)}")
+    finally:
+        db.close()
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -462,6 +498,9 @@ def main() -> None:
     so.add_argument("--proxy", default="", help="Optional proxy URL, e.g. http://127.0.0.1:7890")
     so.add_argument("--max-items", type=int, default=200)
     so.set_defaults(fn=cmd_seed_official_html_sources)
+
+    bf = sub.add_parser("backfill-job-source-kind")
+    bf.set_defaults(fn=cmd_backfill_job_source_kind)
 
     args = p.parse_args()
     args.fn(args)

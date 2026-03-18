@@ -55,15 +55,15 @@ def _guess_published_date(html: str) -> str | None:
     return dt.date().isoformat()
 
 
-def prefill_from_url(url: str) -> dict:
+def prefill_from_url(url: str, *, proxy: str | None = None) -> dict:
     """Best-effort URL prefill. No full snapshot is stored."""
 
     u = (url or "").strip()
     if not u:
         return {}
 
-    proxy = _proxy_from_env()
-    html = get_text(u, proxy=proxy, timeout=30)
+    effective_proxy = proxy or _proxy_from_env()
+    html = get_text(u, proxy=effective_proxy, timeout=30)
 
     og_title = _meta_content(html, key="property", value="og:title")
     og_desc = _meta_content(html, key="property", value="og:description")

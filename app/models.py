@@ -100,6 +100,8 @@ class JobSource(Base):
     id: Mapped[str] = mapped_column(Text, primary_key=True, default=_uuid)
     job_posting_id: Mapped[str] = mapped_column(Text, ForeignKey("job_postings.id", ondelete="CASCADE"), index=True)
     source_type: Mapped[str] = mapped_column(Text)  # official/import/...
+    # Connector kind used to fetch this posting (tencent/kuaishou/iguopin/jd/rss/html_list/...).
+    source_kind: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
     source_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_url: Mapped[str] = mapped_column(Text, unique=True, index=True)
     fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

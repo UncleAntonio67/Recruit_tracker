@@ -10,7 +10,9 @@ _settings = get_settings()
 if _settings.database_url.startswith("sqlite"):
     engine = create_engine(
         _settings.database_url,
-        connect_args={"check_same_thread": False},
+        # SQLite can be used by both the web process and a separate crawl/import process.
+        # A small busy timeout avoids transient "database is locked" errors.
+        connect_args={"check_same_thread": False, "timeout": 30},
         pool_pre_ping=True,
     )
 else:

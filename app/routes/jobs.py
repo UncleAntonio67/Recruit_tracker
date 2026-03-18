@@ -16,6 +16,44 @@ from app.views import templates
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+def _company_query_tokens(text: str) -> list[str]:
+    """Expand common group suffix variants to improve matching.
+
+    Example: user inputs "中核集团", postings may use "中核..." subsidiaries.
+    """
+
+    s = (text or "").strip()
+    if not s:
+        return []
+
+    toks = [s]
+    for suf in ["集团有限公司", "集团股份有限公司", "集团", "有限公司", "股份有限公司"]:
+        if s.endswith(suf) and len(s) > len(suf):
+            toks.append(s[: -len(suf)].strip())
+            break
+
+    # Strip common bracket aliases: "一汽（红旗）" -> "一汽", "红旗"
+    if "（" in s and "）" in s:
+        left = s.split("（", 1)[0].strip()
+        mid = s.split("（", 1)[1].split("）", 1)[0].strip()
+        if left:
+            toks.append(left)
+        if mid:
+            toks.append(mid)
+
+    seen = set()
+    out: list[str] = []
+    for t in toks:
+        tt = t.strip()
+        if not tt:
+            continue
+        if tt in seen:
+            continue
+        seen.add(tt)
+        out.append(tt)
+    return out
+
+
 @router.get("", response_class=HTMLResponse)
 def jobs_list(
     request: Request,
@@ -55,7 +93,9 @@ def jobs_list(
         # Use contains matching to support multi-city fields like "北京/上海".
         conds.append(JobPosting.city.ilike(f"%{city.strip()}%"))
     if company:
-        conds.append(Company.name.ilike(f"%{company.strip()}%"))
+        toks = _company_query_tokens(company)
+        if toks:
+            conds.append(or_(*[Company.name.ilike(f"%{t}%") for t in toks]))
     if industry:
         conds.append(Company.industry == industry.strip())
 

@@ -34,6 +34,14 @@ $env:BOOTSTRAP_ADMIN_USERNAME = $AdminUser
 $env:BOOTSTRAP_ADMIN_PASSWORD = $AdminPass
 $env:CRAWL_INTERVAL_HOURS = "0"
 $env:ENV = "dev"
+$env:DATABASE_URL = "sqlite:///./smoke_test.db"
+
+$dbPath = Join-Path $repo "smoke_test.db"
+if (Test-Path $dbPath) { Remove-Item -Force $dbPath -ErrorAction SilentlyContinue }
+
+Write-Host "Migrating database (smoke_test.db) ..."
+& $python -m alembic upgrade head | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "alembic upgrade failed" }
 
 $p = Start-Process -FilePath $python -ArgumentList @(
   "-m", "uvicorn", "main:app",
@@ -103,5 +111,7 @@ try {
 } finally {
   Write-Host "Stopping server pid=$($p.Id) ..."
   try { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } catch {}
+  try {
+    if (Test-Path $dbPath) { Remove-Item -Force $dbPath -ErrorAction SilentlyContinue }
+  } catch {}
 }
-

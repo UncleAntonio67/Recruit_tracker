@@ -116,47 +116,323 @@ def _parse_company_tsv_text(text: str) -> list[dict]:
     """
 
     t = (text or "").replace("\r\n", "\n").replace("\r", "\n")
-    # Match 5 columns where the 5th is an ASCII URL, stopping before any Chinese chars.
-    pat = re.compile(rf"([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t({_ASCII_URL_RE})")
+    def _clean_major(s: str) -> str:
+        # Normalize "一、互联网与科技" -> "互联网与科技"
+        v = (s or "").strip()
+        v = re.sub(r"^[一二三四五六七八九十]+[、.]\s*", "", v)
+        v = re.sub(r"^\d+[、.]\s*", "", v)
+        return v.strip()
+
+    def _infer_company_type(major: str) -> str | None:
+        industry_major = major or ""
+        if "央企" in industry_major or "国企" in industry_major:
+            return "央企/国企"
+        if "科研" in industry_major or "研究" in industry_major:
+            return "科研院所"
+        if "互联网" in industry_major or "科技" in industry_major:
+            return "科技公司"
+        if "全球" in industry_major or "跨国" in industry_major:
+            return "外企"
+        return None
+
+    def _row(industry_major: str, track: str | None, name: str, focus: str | None, url: str) -> dict | None:
+        nm = (name or "").strip()
+        u = (url or "").strip()
+        if not nm or not u:
+            return None
+        # Skip header-ish rows.
+        if ("企业" in nm and "名称" in nm) or ("官方" in nm and "入口" in nm):
+            return None
+
+        # Normalize "百度 (Baidu)" -> "百度" to avoid duplicate companies when the list mixes CN+EN aliases.
+        nm = re.sub(r"\s+", " ", nm).strip()
+        for sep in ["（", "("]:
+            if sep in nm:
+                head = nm.split(sep, 1)[0].strip()
+                if head and len(head) >= 2:
+                    nm = head
+                break
+
+        major = _clean_major(industry_major)
+        tr = (track or "").strip()
+        company_type = _infer_company_type(major)
+
+        industry = major
+        if tr and tr not in major:
+            industry = f"{major}/{tr}"
+
+        return {
+            "name": nm,
+            "industry": industry[:120] if industry else None,
+            "company_type": company_type,
+            "focus_directions": (focus[:200] if focus else None),
+            "recruitment_url": u,
+            "website": None,
+            "_industry_major": major,
+        }
 
     out: list[dict] = []
-    for m in pat.finditer(t):
-        industry_major = (m.group(1) or "").strip()
-        track = (m.group(2) or "").strip()
-        name = (m.group(3) or "").strip()
-        focus = (m.group(4) or "").strip()
-        url = (m.group(5) or "").strip()
-        if not name or not url:
+
+    # 5 columns: major, track, name, focus, url
+    pat5 = re.compile(rf"([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t({_ASCII_URL_RE})")
+    for m in pat5.finditer(t):
+        rec = _row(m.group(1) or "", m.group(2) or "", m.group(3) or "", m.group(4) or "", m.group(5) or "")
+        if rec:
+            out.append(rec)
+
+    # 4 columns: major, track, name, url (some lists omit focus column)
+    pat4 = re.compile(rf"([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t({_ASCII_URL_RE})")
+    for m in pat4.finditer(t):
+        # Avoid re-adding rows already captured by the 5-col matcher.
+        url = (m.group(4) or "").strip()
+        if any(url == (it.get("recruitment_url") or "") for it in out):
             continue
-        # Skip header row.
-        if "企业" in name and "名称" in name:
+        rec = _row(m.group(1) or "", m.group(2) or "", m.group(3) or "", None, url)
+        if rec:
+            out.append(rec)
+
+    # 3 columns: major, name, url (rare)
+    pat3 = re.compile(rf"([^\t\n]+)\t([^\t\n]+)\t({_ASCII_URL_RE})")
+    for m in pat3.finditer(t):
+        url = (m.group(3) or "").strip()
+        if any(url == (it.get("recruitment_url") or "") for it in out):
             continue
+        rec = _row(m.group(1) or "", None, m.group(2) or "", None, url)
+        if rec:
+            out.append(rec)
 
-        company_type = None
-        if "央企" in industry_major or "国企" in industry_major:
-            company_type = "央企/国企"
-        elif "科研" in industry_major or "研究" in industry_major:
-            company_type = "科研院所"
-        elif "互联网" in industry_major or "科技" in industry_major:
-            company_type = "科技公司"
-        elif "全球" in industry_major or "跨国" in industry_major:
-            company_type = "外企"
+    # Loose recovery: some files have a tail chunk with multiple records concatenated without tabs/newlines.
+    # We'll recover "URL + nearby company name" patterns for URLs not already captured as entrypoints.
+    captured_urls = set(it.get("recruitment_url") for it in out if it.get("recruitment_url"))
+    all_urls = list(dict.fromkeys(re.findall(_ASCII_URL_RE, t)))
 
-        industry = industry_major
-        if track and track not in industry_major:
-            industry = f"{industry_major}/{track}"
+    majors = sorted({(it.get("_industry_major") or "") for it in out if it.get("_industry_major")}, key=len, reverse=True)
+    tracks = []
+    for it in out:
+        ind = (it.get("industry") or "")
+        if "/" in ind:
+            tracks.append(ind.split("/", 1)[1].strip())
+    tracks = sorted({x for x in tracks if x and len(x) <= 20}, key=len, reverse=True)
 
-        out.append(
-            {
-                "name": name,
-                "industry": industry[:120] if industry else None,
-                "company_type": company_type,
-                "focus_directions": focus[:200] if focus else None,
-                "recruitment_url": url,
-                "website": None,
-                "_industry_major": industry_major,
-            }
+    # Company/org suffixes used for name inference in concatenated chunks.
+    # Keep the primary list reasonably "strong": avoid single-character tokens (e.g. "院/所"),
+    # and keep very generic tokens (e.g. "...中心") as a weak fallback to reduce false positives.
+    strong_suffixes = [
+        "股份有限公司",
+        "有限责任公司",
+        "股份公司",
+        "有限公司",
+        "集团",
+        "控股集团",
+        "控股",
+        "研究院",
+        "研究所",
+        "实验室",
+        "委员会",
+        "总行",
+        "银行",
+        "交易所",
+        "出版社",
+        "清算有限公司",
+        "总公司",
+        "股份",
+        "公司",
+    ]
+    weak_suffixes = [
+        "中心",
+    ]
+
+    # Note: avoid '/' in these patterns, or you may accidentally capture "https://.../央企国企..." blobs.
+    strong_suffixes_sorted = sorted({s for s in strong_suffixes if s}, key=len, reverse=True)
+    weak_suffixes_sorted = sorted({s for s in weak_suffixes if s}, key=len, reverse=True)
+
+    suffix_re_strong = re.compile(
+        r"([A-Za-z0-9\u4e00-\u9fff·（）() &.-]{2,80}?(?:"
+        + "|".join(map(re.escape, strong_suffixes_sorted))
+        + r"))"
+    )
+    suffix_re_weak = (
+        re.compile(
+            r"([A-Za-z0-9\u4e00-\u9fff·（）() &.-]{2,80}?(?:"
+            + "|".join(map(re.escape, weak_suffixes_sorted))
+            + r"))"
         )
+        if weak_suffixes_sorted
+        else None
+    )
+    paren_re = re.compile(r"([A-Za-z0-9\u4e00-\u9fff·（）() &.-]{2,80}?[\(（][^()\n]{1,60}[\)）])")
+
+    def _guess_inline_name(context: str) -> str | None:
+        ctx = (context or "").replace("\t", " ").replace("\n", " ")
+        # Remove any URLs that belong to previous records in the concatenated chunk.
+        ctx = re.sub(_ASCII_URL_RE, " ", ctx)
+        ctx = re.sub(r"\s+", " ", ctx).strip()
+        if not ctx:
+            return None
+
+        common_track_prefixes = [
+            "国家金融基建",
+            "证券与交易",
+            "信创与云计算",
+            "交通与航空",
+            "工业互联网",
+            "医疗科技与生信",
+            "智能家电与IoT",
+            "高校系硬科技",
+            "学术与出版",
+            "超算与大数据",
+            "金融云与AI",
+        ]
+
+        # Prefer "...(Alias)" patterns near the end.
+        # 160 chars is often too short for concatenated records with long focus text.
+        tail = ctx[-360:] if len(ctx) > 360 else ctx
+        short_pat = (
+            r"([A-Za-z0-9\u4e00-\u9fff·&.-]{2,30}(?:"
+            + "|".join(map(re.escape, strong_suffixes_sorted))
+            + r"))"
+        )
+
+        m_all = list(paren_re.finditer(tail))
+        if m_all:
+            # Take the rightmost match (closest to the URL we are parsing).
+            cand = m_all[-1].group(1).strip()
+        else:
+            # No alias pattern: try an overlapping suffix token first (works well when there are no separators).
+            short_hits0 = list(re.finditer(r"(?=" + short_pat + r")", tail))
+            if short_hits0:
+                cands0 = [m.group(1).strip() for m in short_hits0 if m.group(1)]
+                prefer_longer_suffixes = ("出版社", "研究院", "研究所", "实验室", "委员会", "交易所", "银行")
+                if any(c.endswith(prefer_longer_suffixes) for c in cands0):
+                    cands2 = [c for c in cands0 if c.endswith(prefer_longer_suffixes)]
+                    cand = max(cands2, key=len) if cands2 else cands0[-1]
+                else:
+                    # Rightmost match tends to drop category prefixes like "...微电网", keeping the org name token.
+                    cand = cands0[-1]
+            else:
+                # Fall back to regex matches (non-overlapping).
+                s_all = list(suffix_re_strong.finditer(tail))
+                if s_all:
+                    cand = s_all[-1].group(1).strip()
+                elif suffix_re_weak:
+                    w_all = list(suffix_re_weak.finditer(tail))
+                    cand = w_all[-1].group(1).strip() if w_all else ""
+                else:
+                    cand = ""
+        if not cand:
+            return None
+
+        # Reduce to a plausible company name.
+        # 1) If we have "(Alias)" take the head part, then keep the last short "name-like" phrase.
+        head = cand
+        for sep in ["（", "("]:
+            if sep in head:
+                head = head.split(sep, 1)[0].strip()
+                break
+
+        # Drop leading major/track tokens if they got glued in front.
+        # Some concatenated chunks have a leading "等/、" before the major, so we accept near-start matches.
+        head = head.lstrip(" 等、,，;；:：|/\\-")
+        changed = True
+        while changed:
+            changed = False
+            for maj in majors:
+                if not maj:
+                    continue
+                pos = head.find(maj)
+                if pos != -1 and pos <= 3:
+                    head = head[pos + len(maj) :].strip()
+                    head = head.lstrip(" 等、,，;；:：|/\\-")
+                    changed = True
+            for tr in tracks:
+                if not tr:
+                    continue
+                pos = head.find(tr)
+                if pos != -1 and pos <= 3:
+                    head = head[pos + len(tr) :].strip()
+                    head = head.lstrip(" 等、,，;；:：|/\\-")
+                    changed = True
+            for tp in common_track_prefixes:
+                pos = head.find(tp)
+                if pos != -1 and pos <= 3:
+                    head = head[pos + len(tp) :].strip()
+                    head = head.lstrip(" 等、,，;；:：|/\\-")
+                    changed = True
+        head = re.sub(r"^[\u4e00-\u9fff]{2,10}与[\u4e00-\u9fffA-Za-z]{1,10}", "", head).strip()
+
+        # Prefer a short suffix-based company phrase if present.
+        # Use an overlapping matcher so we can pick the rightmost name-like token even when the string has no separators.
+        short_hits = list(re.finditer(r"(?=" + short_pat + r")", head))
+        if short_hits:
+            cands = [m.group(1).strip() for m in short_hits if m.group(1)]
+            # For some suffix types, the rightmost match can be too short (e.g. "教育出版社" vs "高等教育出版社").
+            prefer_longer_suffixes = ("出版社", "研究院", "研究所", "实验室", "委员会", "交易所", "银行")
+            if any(c.endswith(prefer_longer_suffixes) for c in cands):
+                cands2 = [c for c in cands if c.endswith(prefer_longer_suffixes)]
+                cand2 = max(cands2, key=len) if cands2 else cands[-1]
+            else:
+                # Rightmost match tends to drop category prefixes like "...微电网", keeping the org name token.
+                cand2 = cands[-1]
+        else:
+            # Fallback: last contiguous token.
+            m = re.search(r"([A-Za-z0-9\u4e00-\u9fff·&.-]{2,40})$", head)
+            cand2 = m.group(1).strip() if m else head.strip()
+
+        cand = cand2.strip(" -_/|·")
+
+        cand = re.sub(r"\s+", " ", cand).strip()
+        if len(cand) < 2 or len(cand) > 80:
+            return None
+        return cand
+
+    def _guess_inline_major(context: str) -> str:
+        # Find last major keyword occurrence in the context.
+        ctx = context or ""
+        best = ""
+        best_pos = -1
+        for maj in majors:
+            if not maj:
+                continue
+            pos = ctx.rfind(maj)
+            if pos > best_pos:
+                best_pos = pos
+                best = maj
+        return best or ""
+
+    # Use URL position boundaries to avoid mixing contexts from previous URLs in concatenated chunks.
+    url_matches = list(re.finditer(_ASCII_URL_RE, t))
+    prev_end = 0
+    for m in url_matches:
+        url = m.group(0)
+        idx = m.start()
+
+        # Always advance prev_end so the segmentation is stable.
+        seg = t[max(0, prev_end) : idx]
+        prev_end = m.end()
+
+        if url in captured_urls:
+            continue
+
+        # Prefer the chunk since the previous URL. If it contains newlines, only keep the last line,
+        # because that's where the fields for the current URL typically are.
+        left = seg
+        if "\n" in left:
+            left = left[left.rfind("\n") + 1 :]
+        # Use a bigger window for glued tail chunks (260 chars is often too short to capture the org name).
+        left = left[-900:] if len(left) > 900 else left
+
+        name = _guess_inline_name(left)
+        if not name:
+            # Fallback: broader lookback if the segment is tiny (e.g., the first URL in the glued tail).
+            left2 = t[max(0, idx - 1400) : idx]
+            name = _guess_inline_name(left2)
+            if not name:
+                continue
+
+        major = _guess_inline_major(left)
+        rec = _row(major or "", None, name, None, url)
+        if rec:
+            out.append(rec)
 
     # Dedup by name, keep the one with a longer URL (often more specific).
     best: dict[str, dict] = {}

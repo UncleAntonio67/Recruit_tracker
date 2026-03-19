@@ -1,8 +1,8 @@
 param(
   [int]$SinceDays = 180,
   [string]$Proxy = "",
-  [ValidateSet("core","all")]
-  [string]$Mode = "core"
+  [ValidateSet("official","core","all")]
+  [string]$Mode = "official"
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,4 +20,3 @@ if ($Proxy) {
 }
 
 & $py -m app.crawl run --since-days $SinceDays --mode $Mode
-

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from sqlalchemy import select
@@ -77,6 +78,278 @@ def _load_json(path: str) -> object:
     p = Path(path)
     raw = p.read_text(encoding="utf-8").strip()
     return json.loads(raw) if raw else []
+
+
+def _read_text_best_effort(path: str) -> str:
+    """Read a local text file with best-effort decoding.
+
+    This repo is often used on Windows + PowerShell where console codepages can
+    make it hard to embed Chinese literals. We keep file decoding resilient.
+    """
+
+    b = Path(path).read_bytes()
+    for enc in ("utf-8-sig", "utf-8", "gb18030"):
+        try:
+            return b.decode(enc)
+        except Exception:
+            continue
+    # Fallback: keep something rather than crash.
+    return b.decode("utf-8", errors="ignore")
+
+
+# ASCII-only URL token (stops before any Chinese chars when records are concatenated).
+# Keep '-' first in the character class to avoid "bad character range".
+_ASCII_URL_RE = r"https?://[-A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%]+"
+
+
+def _parse_company_tsv_text(text: str) -> list[dict]:
+    """Parse tab-separated company list text.
+
+    Expected columns (TSV):
+    - 行业大类
+    - 细分赛道
+    - 企业/机构名称
+    - 重点招聘方向
+    - 官方招聘入口 (URL)
+
+    The file may contain malformed newlines; we match records by tab structure.
+    """
+
+    t = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    # Match 5 columns where the 5th is an ASCII URL, stopping before any Chinese chars.
+    pat = re.compile(rf"([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t([^\t\n]+)\t({_ASCII_URL_RE})")
+
+    out: list[dict] = []
+    for m in pat.finditer(t):
+        industry_major = (m.group(1) or "").strip()
+        track = (m.group(2) or "").strip()
+        name = (m.group(3) or "").strip()
+        focus = (m.group(4) or "").strip()
+        url = (m.group(5) or "").strip()
+        if not name or not url:
+            continue
+        # Skip header row.
+        if "企业" in name and "名称" in name:
+            continue
+
+        company_type = None
+        if "央企" in industry_major or "国企" in industry_major:
+            company_type = "央企/国企"
+        elif "科研" in industry_major or "研究" in industry_major:
+            company_type = "科研院所"
+        elif "互联网" in industry_major or "科技" in industry_major:
+            company_type = "科技公司"
+        elif "全球" in industry_major or "跨国" in industry_major:
+            company_type = "外企"
+
+        industry = industry_major
+        if track and track not in industry_major:
+            industry = f"{industry_major}/{track}"
+
+        out.append(
+            {
+                "name": name,
+                "industry": industry[:120] if industry else None,
+                "company_type": company_type,
+                "focus_directions": focus[:200] if focus else None,
+                "recruitment_url": url,
+                "website": None,
+                "_industry_major": industry_major,
+            }
+        )
+
+    # Dedup by name, keep the one with a longer URL (often more specific).
+    best: dict[str, dict] = {}
+    for it in out:
+        n = it["name"]
+        prev = best.get(n)
+        if not prev:
+            best[n] = it
+            continue
+        if len(str(it.get("recruitment_url") or "")) > len(str(prev.get("recruitment_url") or "")):
+            best[n] = it
+
+    return list(best.values())
+
+
+def _m_zhiye_base(url: str) -> str | None:
+    u = (url or "").strip()
+    if not u:
+        return None
+    try:
+        from urllib.parse import urlparse
+
+        p = urlparse(u)
+        host = (p.netloc or "").strip()
+        if not host:
+            return None
+        if host.endswith(".m.zhiye.com"):
+            return f"{p.scheme or 'https'}://{host}"
+        if host.endswith(".zhiye.com"):
+            sub = host[: -len(".zhiye.com")]
+            if sub:
+                return f"{p.scheme or 'https'}://{sub}.m.zhiye.com"
+    except Exception:
+        return None
+    return None
+
+
+def _is_hotjob(url: str) -> bool:
+    u = (url or "").strip()
+    if not u:
+        return False
+    try:
+        from urllib.parse import urlparse
+
+        p = urlparse(u)
+        host = (p.netloc or "").lower().strip()
+    except Exception:
+        return False
+    return host.endswith(".hotjob.cn") or host == "hotjob.cn"
+
+
+def cmd_import_companies_tsv(args: argparse.Namespace) -> None:
+    """Import companies from a local TSV text file and create official crawl sources.
+
+    This is designed for internal usage: you keep a flat text list of companies
+    and their official entrypoints, then this command upserts companies and
+    creates/updates `Official:<company>` CrawlSource entries.
+    """
+
+    proxy = (str(args.proxy or "").strip() or None)
+    text = _read_text_best_effort(str(args.file))
+    items = _parse_company_tsv_text(text)
+    if not items:
+        raise SystemExit("no companies parsed from file (expected TSV with URLs)")
+
+    disable_global = bool(args.disable_global)
+    force_entrypoint = bool(args.force_entrypoint)
+
+    title_contains = [
+        "后端",
+        "前端",
+        "全栈",
+        "开发",
+        "工程师",
+        "架构",
+        "数据",
+        "算法",
+        "测试",
+        "运维",
+        "DevOps",
+        "SRE",
+        "金融科技",
+        "银行",
+        "新能源",
+        "储能",
+        "锂电",
+        "电池",
+        "电化学",
+        "材料",
+        "化工",
+        "研发",
+        "项目",
+        "项目管理",
+    ]
+    url_contains = ["job", "jobs", "career", "careers", "recruit", "zhaopin", "hr", "join"]
+    url_excludes = ["campus", "intern", "xiaozhao", "校园", "校招", "实习"]
+
+    db = SessionLocal()
+    try:
+        c_created = 0
+        c_updated = 0
+        src_created = 0
+        src_updated = 0
+        disabled = 0
+
+        for it in sorted(items, key=lambda x: x.get("name") or ""):
+            name = str(it.get("name") or "").strip()
+            rec_url = str(it.get("recruitment_url") or "").strip()
+            if not name:
+                continue
+
+            c = db.execute(select(Company).where(Company.name == name)).scalar_one_or_none()
+            if not c:
+                c = Company(name=name)
+                db.add(c)
+                db.flush()
+                c_created += 1
+            else:
+                c_updated += 1
+
+            if not c.industry and it.get("industry"):
+                c.industry = str(it["industry"]).strip()
+            if not c.company_type and it.get("company_type"):
+                c.company_type = str(it["company_type"]).strip()
+            if not c.focus_directions and it.get("focus_directions"):
+                c.focus_directions = str(it["focus_directions"]).strip()
+
+            if rec_url:
+                if force_entrypoint or not (c.recruitment_url and str(c.recruitment_url).strip()):
+                    c.recruitment_url = rec_url
+
+            db.add(c)
+
+            if not rec_url:
+                continue
+
+            src_name = f"Official:{name}"
+            enabled = True
+            industry_major = str(it.get("_industry_major") or "")
+            if disable_global and ("全球" in industry_major or "跨国" in industry_major):
+                enabled = False
+                disabled += 1
+
+            kind = "html_list"
+            cfg: dict = {}
+
+            mz_base = _m_zhiye_base(rec_url)
+            if mz_base:
+                kind = "m_zhiye"
+                cfg = {"base_url": mz_base, "company_name": name, "jc": 1, "page_size": 30, "max_pages": 40, "source_type": "official"}
+            elif _is_hotjob(rec_url):
+                try:
+                    from urllib.parse import urlparse
+
+                    p = urlparse(rec_url)
+                    base = f"{p.scheme or 'https'}://{p.netloc}" if p.netloc else rec_url
+                except Exception:
+                    base = rec_url
+                kind = "hotjob"
+                cfg = {"base_url": base.replace("http://", "https://"), "company_name": name, "recruit_type": 2, "page_size": 12, "max_pages": 12, "source_type": "official"}
+            else:
+                cfg = {
+                    "list_url": rec_url,
+                    "company_name": name,
+                    "url_contains": url_contains,
+                    "url_excludes": url_excludes,
+                    "title_contains": title_contains,
+                    "max_items": int(args.max_items),
+                    "source_type": "official",
+                }
+
+            if proxy:
+                cfg["proxy"] = proxy
+
+            existing = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
+            if existing:
+                existing.kind = kind
+                existing.enabled = bool(enabled)
+                existing.config = cfg
+                db.add(existing)
+                src_updated += 1
+            else:
+                db.add(CrawlSource(kind=kind, name=src_name, enabled=bool(enabled), config=cfg))
+                src_created += 1
+
+        db.commit()
+        print(
+            "imported companies from tsv: "
+            f"companies_created={c_created} companies_updated={c_updated} "
+            f"sources_created={src_created} sources_updated={src_updated} disabled={disabled} total_parsed={len(items)}"
+        )
+    finally:
+        db.close()
 
 
 def cmd_import_companies(args: argparse.Namespace) -> None:
@@ -564,6 +837,14 @@ def main() -> None:
     ix.add_argument("--page-size", type=int, default=50)
     ix.add_argument("--city-allowlist", action="store_true", help="Restrict ingestion to 北上广深 (based on city field)")
     ix.set_defaults(fn=cmd_import_companies_xlsx)
+
+    it = sub.add_parser("import-companies-tsv")
+    it.add_argument("--file", required=True, help="TSV text file with columns: 行业大类/细分赛道/企业/重点方向/官方入口(URL)")
+    it.add_argument("--proxy", default="", help="Optional proxy URL, e.g. http://127.0.0.1:7890")
+    it.add_argument("--max-items", type=int, default=200)
+    it.add_argument("--disable-global", action="store_true", help="Disable crawl sources for '全球跨国巨头' rows (keeps domestic focus)")
+    it.add_argument("--force-entrypoint", action="store_true", help="Overwrite existing recruitment_url if present")
+    it.set_defaults(fn=cmd_import_companies_tsv)
 
     so = sub.add_parser("seed-official-html-sources")
     so.add_argument("--proxy", default="", help="Optional proxy URL, e.g. http://127.0.0.1:7890")

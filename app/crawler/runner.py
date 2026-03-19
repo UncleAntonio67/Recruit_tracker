@@ -339,6 +339,10 @@ def run(db: Session, since_days: int = 180, only_enabled: bool = True, mode: str
         sources_stmt = sources_stmt.where(~CrawlSource.name.ilike("Guopin:%"))
         # Also skip generic HTML list scrapers; those are best-effort and can be slow/JS-heavy/WAF blocked.
         sources_stmt = sources_stmt.where(CrawlSource.kind != "html_list")
+    elif mode_s == "official":
+        # Official mode: used for scheduled runs when you maintain a company list with Official:* sources.
+        # Keep it bounded by skipping per-company Guopin keyword sources, but DO run official html_list/hotjob/m_zhiye.
+        sources_stmt = sources_stmt.where(~CrawlSource.name.ilike("Guopin:%"))
 
     sources = db.execute(sources_stmt.order_by(CrawlSource.created_at.asc())).scalars().all()
 

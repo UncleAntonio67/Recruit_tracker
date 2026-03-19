@@ -147,7 +147,7 @@ def sources_toggle(
 def crawl_run_now(
     request: Request,
     since_days: int = Form(default=180),
-    mode: str = Form(default="core"),
+    mode: str = Form(default="official"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:

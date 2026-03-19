@@ -15,7 +15,8 @@
     <div class="flex gap-2">
       <form action="/admin/crawl/run" method="post" class="flex gap-2 items-center">
         <select class="text-sm px-3 py-2 rounded border bg-white" name="mode">
-          <option value="core" selected>核心(推荐)</option>
+          <option value="official" selected>官方(定时推荐)</option>
+          <option value="core">核心(更快)</option>
           <option value="all">全量(慢)</option>
         </select>
         <select class="text-sm px-3 py-2 rounded border bg-white" name="since_days">

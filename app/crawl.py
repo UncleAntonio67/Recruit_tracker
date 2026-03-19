@@ -405,7 +405,7 @@ def main() -> None:
 
     rn = sub.add_parser("run")
     rn.add_argument("--since-days", type=int, default=180)
-    rn.add_argument("--mode", choices=["core", "all"], default="core")
+    rn.add_argument("--mode", choices=["official", "core", "all"], default="official")
     rn.set_defaults(fn=cmd_run)
 
     r1 = sub.add_parser("run-one")

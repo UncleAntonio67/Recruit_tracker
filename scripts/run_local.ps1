@@ -47,6 +47,8 @@ if ($Proxy) {
 if ($CrawlIntervalHours -gt 0) {
   $env:CRAWL_INTERVAL_HOURS = "$CrawlIntervalHours"
   $env:CRAWL_SINCE_DAYS = "$InitSinceDays"
+  # Keep local scheduled crawls fast by default; "all" can be triggered from admin UI.
+  if (-not $env:CRAWL_MODE) { $env:CRAWL_MODE = "core" }
   $env:CRAWL_INITIAL_DELAY_SEC = "15"
   $env:CRAWL_JITTER_SEC = "30"
 }

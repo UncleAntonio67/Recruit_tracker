@@ -31,21 +31,20 @@ def _post_form_json(url: str, form: dict[str, str | int], *, proxy: str | None) 
             "Referer": "https://zhaopin.jd.com/web/job/job_info_list/3",
         },
     )
-    # JD uses JSON but some endpoints return plain numbers; we only call the list endpoint here.
     return json.loads(raw.decode("utf-8", errors="ignore"))
 
 
 def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
     """JD (京东) official jobs connector.
 
-    Uses endpoints discovered from the official frontend bundle:
+    Uses an endpoint powering the official frontend:
     - POST https://zhaopin.jd.com/web/job/job_list
 
     Config keys:
     - company_name: str (default: 京东)
     - base_url: str (default: https://zhaopin.jd.com)
     - recruit_type: int (default: 3)   # 3 = 社招 in their site routes
-    - page_size: int (default: 50)
+    - page_size: int (default: 50, max: 100)
     - max_pages: int (default: 40)
     - proxy: str (optional)
     """
@@ -66,12 +65,10 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
     effective_proxy = proxy or config.get("proxy")
 
     out: list[RawJob] = []
-
     for page in range(1, max_pages + 1):
         url = f"{base_url}/web/job/job_list"
         data = _post_form_json(
             url,
-            # The official frontend uses `pageIndex` for paging (not `page`).
             {"pageIndex": page, "pageSize": page_size, "recruitType": recruit_type},
             proxy=effective_proxy,
         )
@@ -94,7 +91,6 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
             excerpt = _strip_html(it.get("qualification") or None)
             excerpt = clamp_excerpt(excerpt)
 
-            # Direct job page exists (the HTML is rendered by JS, still a valid official click-through).
             source_url = f"{base_url}/web/job/job_info/{pos_id}"
 
             out.append(
@@ -109,7 +105,6 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
                 )
             )
 
-    # De-dup by source_url
     seen = set()
     deduped: list[RawJob] = []
     for rj in out:
@@ -118,3 +113,4 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
         seen.add(rj.source_url)
         deduped.append(rj)
     return deduped
+

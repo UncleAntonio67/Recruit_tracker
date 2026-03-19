@@ -23,7 +23,12 @@
       </div>
       <div>
         <label class="block text-xs text-slate-600">城市(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="city" value="{{ prefill.city or '' }}" placeholder="北京/上海/广州/深圳" />
+        <select class="mt-1 w-full px-3 py-2 border rounded" name="city">
+          <option value="">不填</option>
+          {% for c in city_options %}
+            <option value="{{ c }}" {% if (prefill.city or '') == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div>
         <label class="block text-xs text-slate-600">发布时间(可选)</label>

@@ -43,6 +43,7 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
                 city=(info.get("city") or config.get("city") or None),
                 published_at=parse_dt(info.get("published_at")) if info.get("published_at") else None,
                 excerpt=(info.get("excerpt") or None),
+                salary_text=(info.get("salary_text") or None),
                 tags=[],
             )
         )

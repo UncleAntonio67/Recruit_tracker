@@ -14,5 +14,6 @@ class RawJob:
     excerpt: str | None = None
     department: str | None = None
     seniority: str | None = None
+    salary_text: str | None = None
     tags: list[str] | None = None
 

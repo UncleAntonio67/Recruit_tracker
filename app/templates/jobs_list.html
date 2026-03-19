@@ -36,6 +36,19 @@
       </select>
     </div>
     <div>
+      <label class="block text-xs text-slate-600">企业类型</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="company_type">
+        <option value="">全部</option>
+        {% for it in options.company_types %}
+          <option value="{{ it }}" {% if filters.company_type == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600">年限/级别</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="seniority" value="{{ filters.seniority }}" placeholder="例如 3年/5年以上/专家" />
+    </div>
+    <div>
       <label class="block text-xs text-slate-600">来源</label>
       <select class="mt-1 w-full px-3 py-2 border rounded" name="source_name">
         <option value="">全部</option>

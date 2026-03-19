@@ -23,20 +23,20 @@ def _as_city(district_list: object) -> str | None:
 def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
     """Guopin (iguopin.com) jobs connector (China SOE / large enterprises aggregator).
 
-    Uses the public JSON API:
-    - https://gp-api.iguopin.com/api/jobs/v1/list
+    Uses a public JSON API:
+    - POST https://gp-api.iguopin.com/api/jobs/v1/list
 
     Notes:
-    - This is an aggregator covering many SOEs and large enterprises. Use include/exclude keyword filters in runner
-      to keep only relevant roles.
+    - This is an aggregator covering many SOEs and large enterprises. Use include/exclude filters in runner
+      to keep only relevant roles (计算机/金融科技/新能源/锂电/储能/化工) and avoid 校招/实习.
 
     Config keys:
     - company_name: str (default: 国聘网)
     - api_base: str (default: https://gp-api.iguopin.com)
-    - page_size: int (default: 50)
+    - page_size: int (default: 50, max: 100)
     - max_pages: int (default: 40)
     - keyword: str (optional)
-    - api_keywords: [str] (optional)  # run multiple keyword searches then union results
+    - api_keywords: [str] (optional)  # union across keywords
     - proxy: str (optional)
     """
 
@@ -58,7 +58,6 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
 
     effective_proxy = proxy or config.get("proxy")
 
-    # If keyword search is configured, we union results across keywords.
     keywords = api_keywords or ([keyword] if keyword else [""])
 
     out: list[RawJob] = []
@@ -97,7 +96,7 @@ def fetch(config: dict, proxy: str | None = None) -> list[RawJob]:
                     )
                 )
 
-    # De-dup by url (job_id) in case API repeats across pages/keywords.
+    # De-dup by URL (job_id) in case API repeats across pages/keywords.
     seen = set()
     deduped: list[RawJob] = []
     for rj in out:

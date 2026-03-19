@@ -83,9 +83,20 @@ def _city_options(db: Session) -> list[str]:
                 continue
             counts[c] = counts.get(c, 0) + int(n or 1)
 
-    preferred = ["北京", "上海", "广州", "深圳"]
+    preferred = ["北京", "上海", "广州", "深圳", "全国", "远程"]
+    common = ["杭州", "南京", "苏州", "武汉", "成都", "西安", "天津", "重庆", "厦门", "长沙", "合肥"]
+
     others = sorted([c for c in counts.keys() if c not in preferred], key=lambda x: (-counts.get(x, 0), x))
-    return preferred + others[:40]
+    out: list[str] = []
+    seen = set()
+    for c in preferred + common + others:
+        if not c or c in seen:
+            continue
+        seen.add(c)
+        out.append(c)
+        if len(out) >= 60:
+            break
+    return out
 
 
 @router.get("", response_class=HTMLResponse)
@@ -97,6 +108,8 @@ def jobs_list(
     city: str | None = Query(default=None),
     company: str | None = Query(default=None),
     industry: str | None = Query(default=None),
+    company_type: str | None = Query(default=None),
+    seniority: str | None = Query(default=None),
     source_name: str | None = Query(default=None),
     source_type: str | None = Query(default=None),
     source_kind: str | None = Query(default=None),
@@ -134,6 +147,12 @@ def jobs_list(
             conds.append(or_(*[Company.name.ilike(f"%{t}%") for t in toks]))
     if industry:
         conds.append(Company.industry == industry.strip())
+    if company_type:
+        conds.append(Company.company_type == company_type.strip())
+    if seniority:
+        # Many sources store seniority/experience in a short label. We also fallback to excerpt fuzzy match.
+        like = f"%{seniority.strip()}%"
+        conds.append(or_(JobPosting.seniority.ilike(like), JobPosting.excerpt.ilike(like)))
 
     if since_days:
         cutoff = datetime.now(UTC) - timedelta(days=int(since_days))
@@ -199,6 +218,8 @@ def jobs_list(
 
     industries = [r[0] for r in db.execute(select(Company.industry).where(Company.industry.is_not(None)).distinct()).all()]
     industries = sorted([x for x in industries if x])
+    company_types = [r[0] for r in db.execute(select(Company.company_type).where(Company.company_type.is_not(None)).distinct()).all()]
+    company_types = sorted([x for x in company_types if x])
     source_names = [r[0] for r in db.execute(select(JobSource.source_name).where(JobSource.source_name.is_not(None)).distinct()).all()]
     source_names = sorted([x for x in source_names if x])
     source_types = [r[0] for r in db.execute(select(JobSource.source_type).where(JobSource.source_type.is_not(None)).distinct()).all()]
@@ -217,6 +238,8 @@ def jobs_list(
                 "city": city or "",
                 "company": company or "",
                 "industry": industry or "",
+                "company_type": company_type or "",
+                "seniority": seniority or "",
                 "source_name": source_name or "",
                 "source_type": source_type or "",
                 "source_kind": source_kind or "",
@@ -229,6 +252,7 @@ def jobs_list(
             },
             "options": {
                 "industries": industries,
+                "company_types": company_types,
                 "source_names": source_names,
                 "source_types": source_types,
                 "source_kinds": source_kinds,
@@ -248,6 +272,7 @@ def jobs_list(
 def import_page(
     request: Request,
     url: str | None = Query(default=None),
+    db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> HTMLResponse:
     prefill = {}
@@ -256,7 +281,15 @@ def import_page(
             prefill = prefill_from_url(str(url).strip())
         except Exception:
             prefill = {"source_url": str(url).strip()}
-    return templates.TemplateResponse("import_job.html", {"request": request, "user": user, "prefill": prefill})
+    return templates.TemplateResponse(
+        "import_job.html",
+        {
+            "request": request,
+            "user": user,
+            "prefill": prefill,
+            "city_options": _city_options(db),
+        },
+    )
 
 
 @router.post("/import")

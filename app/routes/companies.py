@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
-from app.models import Company, User
+from app.models import Company, CrawlSource, User
 from app.views import templates
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -118,3 +118,72 @@ def company_update(
     db.add(c)
     db.commit()
     return RedirectResponse(url=f"/companies/{c.id}", status_code=302)
+
+
+@router.post("/{company_id}/seed_source")
+def company_seed_source(
+    request: Request,
+    company_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> RedirectResponse:
+    """Create/update a CrawlSource for this company's official entrypoint.
+
+    This lets the user maintain a company list and "逐个"补齐官网入口后，一键生成采集源。
+    """
+
+    c = db.get(Company, company_id)
+    if not c:
+        return RedirectResponse(url="/companies", status_code=302)
+    if not c.recruitment_url or not c.recruitment_url.strip():
+        return RedirectResponse(url=f"/companies/{c.id}", status_code=302)
+
+    rec_url = c.recruitment_url.strip()
+    src_name = f"Official:{c.name}"
+
+    kind = "html_list"
+    cfg: dict = {
+        "list_url": rec_url,
+        "company_name": c.name,
+        "url_contains": ["job", "jobs", "career", "careers", "recruit", "zhaopin", "hr", "join"],
+        "url_excludes": ["campus", "intern", "xiaozhao", "校园", "校招", "实习"],
+        "title_contains": ["后端", "前端", "全栈", "开发", "工程师", "架构", "数据", "算法", "测试", "金融科技", "新能源", "储能", "锂电", "电池", "化工", "研发", "项目"],
+        "max_items": 200,
+        "source_type": "official",
+    }
+
+    # If it's a Beisen Zhiye portal, prefer the structured API connector.
+    try:
+        from urllib.parse import urlparse
+
+        p = urlparse(rec_url)
+        host = (p.netloc or "").strip()
+        if host.endswith(".m.zhiye.com"):
+            kind = "m_zhiye"
+            cfg = {"base_url": f"{p.scheme}://{host}", "company_name": c.name, "jc": 1, "page_size": 30, "max_pages": 40, "source_type": "official"}
+        elif host.endswith(".zhiye.com"):
+            sub = host[: -len(".zhiye.com")]
+            if sub:
+                kind = "m_zhiye"
+                cfg = {
+                    "base_url": f"{p.scheme}://{sub}.m.zhiye.com",
+                    "company_name": c.name,
+                    "jc": 1,
+                    "page_size": 30,
+                    "max_pages": 40,
+                    "source_type": "official",
+                }
+    except Exception:
+        pass
+
+    existing = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
+    if existing:
+        existing.kind = kind
+        existing.enabled = True
+        existing.config = cfg
+        db.add(existing)
+    else:
+        db.add(CrawlSource(kind=kind, name=src_name, enabled=True, config=cfg))
+
+    db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=302)

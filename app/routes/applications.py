@@ -14,6 +14,37 @@ from app.views import templates
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
+CITY_OPTIONS = [
+    "北京",
+    "上海",
+    "广州",
+    "深圳",
+    "杭州",
+    "南京",
+    "苏州",
+    "武汉",
+    "成都",
+    "西安",
+    "天津",
+    "重庆",
+    "厦门",
+    "长沙",
+    "合肥",
+    "青岛",
+    "济南",
+    "郑州",
+    "大连",
+    "沈阳",
+    "宁波",
+    "无锡",
+    "福州",
+    "珠海",
+    "东莞",
+    "佛山",
+    "全国",
+    "远程",
+]
+
 STAGE_LABELS = {
     # legacy english -> cn
     "not_applied": "未投递",
@@ -132,6 +163,7 @@ def applications_list(
 @router.get("/new", response_class=HTMLResponse)
 def application_new_page(
     request: Request,
+    url: str | None = Query(default=None),
     title_text: str | None = Query(default=None),
     company_text: str | None = Query(default=None),
     city_text: str | None = Query(default=None),
@@ -140,6 +172,20 @@ def application_new_page(
     stage: str | None = Query(default=None),
     user: User = Depends(get_current_user),
 ) -> HTMLResponse:
+    # Optional prefill from a URL (similar to /jobs/import).
+    if url and str(url).strip():
+        try:
+            from app.crawler.prefill import prefill_from_url
+
+            info = prefill_from_url(str(url).strip())
+            title_text = title_text or (info.get("title") or None)
+            company_text = company_text or (info.get("company_name") or None)
+            city_text = city_text or (info.get("city") or None)
+            source_url = source_url or (info.get("source_url") or str(url).strip())
+        except Exception:
+            # Prefill is best-effort; don't block manual entry.
+            pass
+
     return templates.TemplateResponse(
         "application_new.html",
         {
@@ -147,6 +193,7 @@ def application_new_page(
             "user": user,
             "stages": STAGES,
             "channels": CHANNEL_OPTIONS,
+            "city_options": CITY_OPTIONS,
             "prefill": {
                 "title_text": (title_text or ""),
                 "company_text": (company_text or ""),
@@ -242,6 +289,7 @@ def application_detail(
             "stages": STAGES,
             "stage_labels": STAGE_LABELS,
             "channels": CHANNEL_OPTIONS,
+            "city_options": CITY_OPTIONS,
             "event_types": EVENT_TYPES,
             "event_results": EVENT_RESULTS,
         },

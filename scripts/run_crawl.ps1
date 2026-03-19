@@ -1,6 +1,8 @@
-﻿param(
+param(
   [int]$SinceDays = 180,
-  [string]$Proxy = ""
+  [string]$Proxy = "",
+  [ValidateSet("core","all")]
+  [string]$Mode = "core"
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,4 +19,5 @@ if ($Proxy) {
   $env:HTTPS_PROXY = $Proxy
 }
 
-& $py -m app.crawl run --since-days $SinceDays
+& $py -m app.crawl run --since-days $SinceDays --mode $Mode
+

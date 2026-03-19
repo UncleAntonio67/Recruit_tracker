@@ -1,10 +1,13 @@
 ﻿from __future__ import annotations
 
+import gzip
 import json
+import zlib
 from urllib.request import ProxyHandler, Request, build_opener
 
 _DEFAULT_HEADERS = {
     "User-Agent": "recruit-tracker/0.1",
+    "Accept-Encoding": "gzip, deflate",
 }
 
 
@@ -31,7 +34,22 @@ def request_bytes(
 
     req = Request(url, headers=hdrs, data=data, method=method.upper())
     with op.open(req, timeout=timeout) as resp:
-        return resp.read()
+        raw = resp.read()
+        enc = (resp.headers.get("Content-Encoding") or "").lower()
+        if "gzip" in enc:
+            try:
+                return gzip.decompress(raw)
+            except Exception:
+                return raw
+        if "deflate" in enc:
+            try:
+                return zlib.decompress(raw)
+            except Exception:
+                try:
+                    return zlib.decompress(raw, -zlib.MAX_WBITS)
+                except Exception:
+                    return raw
+        return raw
 
 
 def get_text(

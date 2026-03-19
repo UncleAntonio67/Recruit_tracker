@@ -243,6 +243,19 @@ def cmd_seed_default(args: argparse.Namespace) -> None:
                 "city_allowlist": city_allow,
             },
         ),
+        (
+            "m_zhiye",
+            "中核集团",
+            {
+                "company_name": "中核集团",
+                "base_url": "https://cnnc.m.zhiye.com",
+                "jc": 1,  # 社招
+                "page_size": 30,
+                "max_pages": 40,
+                "include_keywords": include,
+                "exclude_keywords": exclude,
+            },
+        ),
     ]
 
     db = SessionLocal()
@@ -320,7 +333,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
     db = SessionLocal()
     try:
-        stats = run(db, since_days=args.since_days)
+        stats = run(db, since_days=args.since_days, mode=str(getattr(args, "mode", "") or "all"))
         print(json.dumps(stats, ensure_ascii=False, indent=2))
     finally:
         db.close()
@@ -337,7 +350,7 @@ def main() -> None:
     ad.add_argument(
         "--kind",
         required=True,
-        choices=["tencent", "kuaishou", "iguopin", "jd", "greenhouse", "lever", "rss", "html_list", "url_list"],
+        choices=["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "greenhouse", "lever", "rss", "html_list", "url_list"],
     )
     ad.add_argument("--name", required=True)
     ad.add_argument("--disabled", action="store_true")
@@ -357,6 +370,7 @@ def main() -> None:
 
     rn = sub.add_parser("run")
     rn.add_argument("--since-days", type=int, default=180)
+    rn.add_argument("--mode", choices=["core", "all"], default="core")
     rn.set_defaults(fn=cmd_run)
 
     args = p.parse_args()

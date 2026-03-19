@@ -14,6 +14,10 @@
     </div>
     <div class="flex gap-2">
       <form action="/admin/crawl/run" method="post" class="flex gap-2 items-center">
+        <select class="text-sm px-3 py-2 rounded border bg-white" name="mode">
+          <option value="core" selected>核心(推荐)</option>
+          <option value="all">全量(慢)</option>
+        </select>
         <select class="text-sm px-3 py-2 rounded border bg-white" name="since_days">
           {% for d in [30, 90, 180, 365] %}
             <option value="{{ d }}" {% if d == 180 %}selected{% endif %}>近 {{ d }} 天</option>

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou, url_list
+from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou, url_list, m_zhiye
 from app.crawler.job_types import RawJob
 from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, find_salary_text, is_recent, parse_salary_k, sha1, utcnow
 from app.models import Company, CrawlSource, JobPosting, JobSource
@@ -69,7 +69,12 @@ def _ingest_job(
     created = False
 
     # Salary best-effort inference (no guarantees).
-    inferred_salary_text = find_salary_text(raw.excerpt) or find_salary_text(raw.title)
+    # Prefer connector-provided salary if available, otherwise infer from excerpt/title.
+    inferred_salary_text = (
+        (raw.salary_text.strip() if raw.salary_text and raw.salary_text.strip() else None)
+        or find_salary_text(raw.excerpt)
+        or find_salary_text(raw.title)
+    )
     mn_k, mx_k = parse_salary_k(inferred_salary_text)
 
     if not job:
@@ -219,13 +224,25 @@ def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
         raw_jobs: list[RawJob]
 
         if s.kind == "greenhouse":
-            raw_jobs = greenhouse.fetch(board=cfg["board"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
+            raw_jobs = greenhouse.fetch(
+                board=cfg["board"],
+                company_name=cfg.get("company_name") or s.name,
+                proxy=cfg.get("proxy"),
+            )
             src_type = "official"
         elif s.kind == "lever":
-            raw_jobs = lever.fetch(company=cfg["company"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
+            raw_jobs = lever.fetch(
+                company=cfg["company"],
+                company_name=cfg.get("company_name") or s.name,
+                proxy=cfg.get("proxy"),
+            )
             src_type = "official"
         elif s.kind == "rss":
-            raw_jobs = rss.fetch(feed_url=cfg["feed_url"], company_name=cfg.get("company_name") or s.name, proxy=cfg.get("proxy"))
+            raw_jobs = rss.fetch(
+                feed_url=cfg["feed_url"],
+                company_name=cfg.get("company_name") or s.name,
+                proxy=cfg.get("proxy"),
+            )
             src_type = cfg.get("source_type") or "official"
         elif s.kind == "html_list":
             raw_jobs = html_list.fetch(cfg, proxy=cfg.get("proxy"))
@@ -245,23 +262,26 @@ def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
         elif s.kind == "url_list":
             raw_jobs = url_list.fetch(cfg, proxy=cfg.get("proxy"))
             src_type = cfg.get("source_type") or "import"
+        elif s.kind == "m_zhiye":
+            raw_jobs = m_zhiye.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
         else:
             raise ValueError(f"unknown kind: {s.kind}")
 
-            for rj in raw_jobs:
-                seen += 1
-                if not _passes_filters(rj, cfg):
-                    continue
-                c, _job_id = _ingest_job(
-                    db,
-                    rj,
-                    source_type=src_type,
-                    source_name=s.name,
-                    source_kind=s.kind,
-                    since_days=since_days,
-                )
-                if c:
-                    created += 1
+        for rj in raw_jobs:
+            seen += 1
+            if not _passes_filters(rj, cfg):
+                continue
+            c, _job_id = _ingest_job(
+                db,
+                rj,
+                source_type=src_type,
+                source_name=s.name,
+                source_kind=s.kind,
+                since_days=since_days,
+            )
+            if c:
+                created += 1
 
         s.last_status = "ok"
         s.last_error = None
@@ -284,10 +304,18 @@ def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
     }
 
 
-def run(db: Session, since_days: int = 180, only_enabled: bool = True) -> dict:
+def run(db: Session, since_days: int = 180, only_enabled: bool = True, mode: str = "all") -> dict:
     sources_stmt = select(CrawlSource)
     if only_enabled:
         sources_stmt = sources_stmt.where(CrawlSource.enabled == True)  # noqa: E712
+
+    mode_s = (mode or "").strip().lower() or "all"
+    if mode_s == "core":
+        # Core mode: keep it fast and stable for scheduled runs.
+        # Skip per-company Guopin keyword sources (Guopin:<company>) which can explode runtime.
+        sources_stmt = sources_stmt.where(~CrawlSource.name.ilike("Guopin:%"))
+        # Also skip generic HTML list scrapers; those are best-effort and can be slow/JS-heavy/WAF blocked.
+        sources_stmt = sources_stmt.where(CrawlSource.kind != "html_list")
 
     sources = db.execute(sources_stmt.order_by(CrawlSource.created_at.asc())).scalars().all()
 
@@ -309,6 +337,7 @@ def run(db: Session, since_days: int = 180, only_enabled: bool = True) -> dict:
             stats["errors"] += 1
         stats["per_source"].append(res)
 
+    stats["mode"] = mode_s
     return stats
 
 

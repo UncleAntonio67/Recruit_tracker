@@ -389,32 +389,71 @@ def cmd_seed_official_html_sources(args: argparse.Namespace) -> None:
             .all()
         )
 
+        def _m_zhiye_base(url: str) -> str | None:
+            u = (url or "").strip()
+            if not u:
+                return None
+            # Common pattern: https://xxx.zhiye.com/... -> https://xxx.m.zhiye.com
+            try:
+                from urllib.parse import urlparse
+
+                p = urlparse(u)
+                host = (p.netloc or "").strip()
+                if not host:
+                    return None
+                if host.endswith(".m.zhiye.com"):
+                    return f"{p.scheme}://{host}"
+                if host.endswith(".zhiye.com"):
+                    sub = host[: -len(".zhiye.com")]
+                    if sub:
+                        return f"{p.scheme}://{sub}.m.zhiye.com"
+            except Exception:
+                return None
+            return None
+
         created = 0
         updated = 0
         for c in companies:
             name = c.name
             src_name = f"Official:{name}"
-            cfg = {
-                "list_url": c.recruitment_url,
-                "company_name": name,
-                "url_contains": url_contains,
-                "url_excludes": url_excludes,
-                "title_contains": title_contains,
-                "max_items": int(args.max_items),
-                "source_type": "official",
-            }
+            kind = "html_list"
+            cfg: dict = {}
+
+            rec_url = (c.recruitment_url or "").strip()
+            mz_base = _m_zhiye_base(rec_url) if rec_url else None
+            if mz_base:
+                kind = "m_zhiye"
+                cfg = {
+                    "base_url": mz_base,
+                    "company_name": name,
+                    "jc": 1,  # 社招
+                    "page_size": 30,
+                    "max_pages": 30,
+                    "source_type": "official",
+                }
+            else:
+                cfg = {
+                    "list_url": c.recruitment_url,
+                    "company_name": name,
+                    "url_contains": url_contains,
+                    "url_excludes": url_excludes,
+                    "title_contains": title_contains,
+                    "max_items": int(args.max_items),
+                    "source_type": "official",
+                }
+
             if proxy:
                 cfg["proxy"] = proxy
 
             existing = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
             if existing:
-                existing.kind = "html_list"
+                existing.kind = kind
                 existing.enabled = True
                 existing.config = cfg
                 db.add(existing)
                 updated += 1
             else:
-                s = CrawlSource(kind="html_list", name=src_name, enabled=True, config=cfg)
+                s = CrawlSource(kind=kind, name=src_name, enabled=True, config=cfg)
                 db.add(s)
                 created += 1
 

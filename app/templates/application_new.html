@@ -3,6 +3,14 @@
   <h1 class="text-xl font-semibold">新建投递</h1>
   <p class="text-sm text-slate-600 mt-1">用于无法关联岗位库的投递(例如临时内推、线下机会)。</p>
 
+  <form class="mt-5 bg-white border rounded p-4 flex flex-col md:flex-row gap-3 md:items-end max-w-2xl" method="get" action="/applications/new">
+    <div class="flex-1">
+      <label class="block text-xs text-slate-600">给一个岗位链接(可选)，系统尝试自动填充</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" name="url" value="{{ prefill.source_url or '' }}" placeholder="粘贴岗位详情页 URL" />
+    </div>
+    <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">自动填充</button>
+  </form>
+
   <form class="mt-5 bg-white border rounded p-4 space-y-3 max-w-2xl" method="post" action="/applications/new">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
@@ -17,7 +25,7 @@
         <label class="block text-xs text-slate-600">城市(可选)</label>
         <select class="mt-1 w-full px-3 py-2 border rounded" name="city_text">
           <option value="">不填</option>
-          {% for c in ["北京","上海","广州","深圳","全国","远程"] %}
+          {% for c in city_options %}
             <option value="{{ c }}" {% if prefill.city_text == c %}selected{% endif %}>{{ c }}</option>
           {% endfor %}
         </select>

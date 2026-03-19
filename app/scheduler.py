@@ -47,6 +47,7 @@ def start_crawl_scheduler() -> None:
     since_days = _get_int("CRAWL_SINCE_DAYS", 180)
     initial_delay = max(0, _get_int("CRAWL_INITIAL_DELAY_SEC", 30))
     jitter = max(0, _get_int("CRAWL_JITTER_SEC", 30))
+    mode = (os.getenv("CRAWL_MODE") or "core").strip() or "core"
 
     def _loop() -> None:
         if initial_delay:
@@ -59,7 +60,7 @@ def start_crawl_scheduler() -> None:
             try:
                 db = SessionLocal()
                 try:
-                    stats = run_crawl(db, since_days=since_days)
+                    stats = run_crawl(db, since_days=since_days, mode=mode)
                     log.info("scheduled crawl finished: %s", stats)
                 finally:
                     db.close()
@@ -72,4 +73,3 @@ def start_crawl_scheduler() -> None:
     t.start()
     _started = True
     log.info("crawl scheduler started: every %sh since_days=%s", interval_hours, since_days)
-

@@ -76,6 +76,15 @@
       </select>
     </div>
     <div>
+      <label class="block text-xs text-slate-600">投递状态</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="applied">
+        <option value="">全部</option>
+        {% for v, label in options.applied %}
+          <option value="{{ v }}" {% if filters.applied == v %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
       <label class="block text-xs text-slate-600">时间范围</label>
       <select class="mt-1 w-full px-3 py-2 border rounded" name="since_days">
         {% for d in options.since_days %}

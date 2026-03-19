@@ -119,6 +119,7 @@ def jobs_list(
     salary_min_k: int | None = Query(default=None, ge=0, le=1000),
     salary_max_k: int | None = Query(default=None, ge=0, le=1000),
     salary_only: int | None = Query(default=None),
+    applied: str | None = Query(default=None),  # "" | "applied" | "not_applied"
     page: int = Query(default=1, ge=1, le=5000),
 ) -> HTMLResponse:
     page_size = 200
@@ -182,6 +183,21 @@ def jobs_list(
         sk = source_kind.strip()
         if sk:
             conds.append(exists(select(1).where(and_(JobSource.job_posting_id == JobPosting.id, JobSource.source_kind == sk))))
+
+    if applied:
+        v = (applied or "").strip().lower()
+        has_app = exists(
+            select(1).where(
+                and_(
+                    Application.owner_user_id == user.id,
+                    Application.job_posting_id == JobPosting.id,
+                )
+            )
+        )
+        if v == "applied":
+            conds.append(has_app)
+        elif v == "not_applied":
+            conds.append(~has_app)
 
     # Salary filtering (k RMB/month). Many sources won't have salaries, so these are optional filters.
     if salary_only:
@@ -249,6 +265,7 @@ def jobs_list(
                 "salary_min_k": "" if salary_min_k is None else str(salary_min_k),
                 "salary_max_k": "" if salary_max_k is None else str(salary_max_k),
                 "salary_only": "1" if salary_only else "",
+                "applied": applied or "",
             },
             "options": {
                 "industries": industries,
@@ -258,6 +275,7 @@ def jobs_list(
                 "source_kinds": source_kinds,
                 "cities": _city_options(db),
                 "since_days": [7, 30, 90, 180, 365, 730],
+                "applied": [("not_applied", "未投递/未创建记录"), ("applied", "已创建投递记录")],
             },
             "page": page,
             "has_next": has_next,
@@ -500,10 +518,15 @@ def job_detail(
 
     comp = db.get(Company, job.company_id) if job.company_id else None
     sources = db.execute(select(JobSource).where(JobSource.job_posting_id == job.id)).scalars().all()
+    existing_app = (
+        db.execute(select(Application).where(and_(Application.owner_user_id == user.id, Application.job_posting_id == job.id)))
+        .scalars()
+        .first()
+    )
 
     return templates.TemplateResponse(
         "job_detail.html",
-        {"request": request, "user": user, "job": job, "company": comp, "sources": sources},
+        {"request": request, "user": user, "job": job, "company": comp, "sources": sources, "existing_app": existing_app},
     )
 
 

@@ -1,2 +1,21 @@
 ﻿/* Intentionally minimal. Tailwind provides most styling. */
-pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+html { scroll-behavior: smooth; }
+
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Make <details><summary> look like a clickable control. */
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
+
+summary::after {
+  content: "▾";
+  display: inline-block;
+  margin-left: 8px;
+  color: #64748b; /* slate-500 */
+}
+details[open] summary::after { content: "▴"; }
+
+/* Slightly nicer underline defaults for links. */
+a { text-underline-offset: 3px; }

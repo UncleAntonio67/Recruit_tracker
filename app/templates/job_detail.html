@@ -9,6 +9,13 @@
         {% if job.published_at %} · 发布: {{ job.published_at | fmt_dt('%Y-%m-%d') }}{% endif %}
         {% if job.salary_text %} · 薪资: {{ job.salary_text }}{% endif %}
       </p>
+      {% if existing_app %}
+        <div class="mt-2">
+          <a class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications/{{ existing_app.id }}">
+            已有投递记录: {{ existing_app.stage }}
+          </a>
+        </div>
+      {% endif %}
     </div>
     <form class="flex items-end gap-2 flex-wrap" method="post" action="/jobs/{{ job.id }}/apply">
       <div>
@@ -24,7 +31,11 @@
         <label class="block text-xs text-slate-600">其他(可选)</label>
         <input class="mt-1 px-3 py-2 border rounded" name="channel_other" placeholder="例如: 某同事内推/某群" />
       </div>
-      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">创建投递记录</button>
+      {% if existing_app %}
+        <button class="px-3 py-2 rounded bg-slate-200 text-slate-500 cursor-not-allowed" type="button" disabled>已创建</button>
+      {% else %}
+        <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">创建投递记录</button>
+      {% endif %}
     </form>
   </div>
 

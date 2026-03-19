@@ -3,27 +3,28 @@
   <h1 class="text-xl font-semibold">导入岗位</h1>
   <p class="text-sm text-slate-600 mt-1">用于公众号/Boss/群内转发等渠道的半自动补充。系统不保存全文快照，仅保存结构化字段+短摘要+原文链接。</p>
 
-  <form class="mt-5 bg-white border rounded p-4 flex flex-col md:flex-row gap-3 md:items-end" method="get" action="/jobs/import">
+  <form id="prefill-form" class="mt-5 bg-white border rounded p-4 flex flex-col md:flex-row gap-3 md:items-end" method="get" action="/jobs/import">
     <div class="flex-1">
       <label class="block text-xs text-slate-600">给一个岗位链接(可选)，系统尝试自动填充</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="url" value="{{ prefill.source_url or '' }}" placeholder="粘贴岗位详情页 URL" />
+      <input id="prefill-url" class="mt-1 w-full px-3 py-2 border rounded" name="url" value="{{ prefill.source_url or '' }}" placeholder="粘贴岗位详情页 URL" />
+      <div id="prefill-status" class="text-xs text-slate-500 mt-1"></div>
     </div>
     <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">自动填充</button>
   </form>
 
-  <form class="mt-5 bg-white border rounded p-4 space-y-3" method="post" action="/jobs/import">
+  <form id="import-form" class="mt-5 bg-white border rounded p-4 space-y-3" method="post" action="/jobs/import">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
         <label class="block text-xs text-slate-600">岗位标题</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="title" value="{{ prefill.title or '' }}" required />
+        <input id="f-title" class="mt-1 w-full px-3 py-2 border rounded" name="title" value="{{ prefill.title or '' }}" required />
       </div>
       <div>
         <label class="block text-xs text-slate-600">公司(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_name" value="{{ prefill.company_name or '' }}" placeholder="例如: 国家电网/宁德时代/..." />
+        <input id="f-company" class="mt-1 w-full px-3 py-2 border rounded" name="company_name" value="{{ prefill.company_name or '' }}" placeholder="例如: 国家电网/宁德时代/..." />
       </div>
       <div>
         <label class="block text-xs text-slate-600">城市(可选)</label>
-        <select class="mt-1 w-full px-3 py-2 border rounded" name="city">
+        <select id="f-city" class="mt-1 w-full px-3 py-2 border rounded" name="city">
           <option value="">不填</option>
           {% for c in city_options %}
             <option value="{{ c }}" {% if (prefill.city or '') == c %}selected{% endif %}>{{ c }}</option>
@@ -32,20 +33,20 @@
       </div>
       <div>
         <label class="block text-xs text-slate-600">发布时间(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_at" value="{{ prefill.published_at or '' }}" />
+        <input id="f-published" class="mt-1 w-full px-3 py-2 border rounded" type="date" name="published_at" value="{{ prefill.published_at or '' }}" />
       </div>
       <div>
         <label class="block text-xs text-slate-600">薪资(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="salary_text" value="{{ prefill.salary_text or '' }}" placeholder="例如 20-40k · 30-50万/年" />
+        <input id="f-salary" class="mt-1 w-full px-3 py-2 border rounded" name="salary_text" value="{{ prefill.salary_text or '' }}" placeholder="例如 20-40k · 30-50万/年" />
       </div>
     </div>
     <div>
       <label class="block text-xs text-slate-600">原文链接</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ prefill.source_url or '' }}" required />
+      <input id="f-source" class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ prefill.source_url or '' }}" required />
     </div>
     <div>
       <label class="block text-xs text-slate-600">短摘要(可选,建议 200-400 字)</label>
-      <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[120px]" name="excerpt">{{ prefill.excerpt or '' }}</textarea>
+      <textarea id="f-excerpt" class="mt-1 w-full px-3 py-2 border rounded min-h-[120px]" name="excerpt">{{ prefill.excerpt or '' }}</textarea>
     </div>
     <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">入库</button>
   </form>
@@ -65,4 +66,47 @@
       <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">开始导入</button>
     </form>
   </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById('prefill-form');
+      const urlInput = document.getElementById('prefill-url');
+      const status = document.getElementById('prefill-status');
+      if (!form || !urlInput || !status) return;
+
+      const setStatus = (msg) => { status.textContent = msg || ''; };
+      const val = (id) => document.getElementById(id);
+
+      form.addEventListener('submit', async (e) => {
+        // Prefer API prefill (no refresh). Fall back to normal GET if fetch fails.
+        e.preventDefault();
+        const url = (urlInput.value || '').trim();
+        if (!url) {
+          setStatus('请输入 URL。');
+          return;
+        }
+
+        setStatus('正在抓取并填充...');
+        try {
+          const resp = await fetch('/api/prefill?url=' + encodeURIComponent(url), { credentials: 'same-origin' });
+          if (!resp.ok) throw new Error('http ' + resp.status);
+          const info = await resp.json();
+
+          if (info.title && val('f-title')) val('f-title').value = info.title;
+          if (info.company_name && val('f-company')) val('f-company').value = info.company_name;
+          if (info.city && val('f-city')) val('f-city').value = info.city;
+          if (info.published_at && val('f-published')) val('f-published').value = info.published_at;
+          if (info.salary_text && val('f-salary')) val('f-salary').value = info.salary_text;
+          if (info.source_url && val('f-source')) val('f-source').value = info.source_url;
+          if (info.excerpt && val('f-excerpt')) val('f-excerpt').value = info.excerpt;
+
+          setStatus('已填充。你可以检查并点击“入库”。');
+        } catch (err) {
+          setStatus('自动填充失败，已改用刷新方式。');
+          // Fallback to original GET behavior.
+          form.submit();
+        }
+      });
+    })();
+  </script>
 {% endblock %}

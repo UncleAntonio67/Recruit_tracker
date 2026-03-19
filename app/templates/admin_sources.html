@@ -7,6 +7,7 @@
         配置多个渠道，支持近 180 天采集。
         {% if crawl_interval_hours and crawl_interval_hours > 0 %}
           自动采集间隔: {{ crawl_interval_hours }} 小时(约 {{ (crawl_interval_hours/24)|round(1) }} 天)。
+          <span class="ml-2">默认模式: {{ crawl_mode }} · 默认范围: 近 {{ crawl_since_days }} 天。</span>
         {% else %}
           当前未启用自动采集(可通过环境变量 CRAWL_INTERVAL_HOURS 设置)。
         {% endif %}
@@ -38,7 +39,8 @@
       <div class="col-span-2">最近状态</div>
       <div class="col-span-2">操作</div>
     </div>
-    {% for s in sources %}
+    {% for it in items %}
+      {% set s = it.source %}
       <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b items-center">
         <div class="col-span-2 text-sm">{{ "是" if s.enabled else "否" }}</div>
         <div class="col-span-2 text-sm text-slate-700">{{ s.kind }}</div>
@@ -48,6 +50,9 @@
             last:
             {% if s.last_run_at %}{{ s.last_run_at | fmt_dt('%Y-%m-%d %H:%M') }}{% else %}-{% endif %}
             · {{ s.last_status or "-" }}
+            {% if it.next_run_at %}
+              · next: {{ it.next_run_at | fmt_dt('%Y-%m-%d %H:%M') }}
+            {% endif %}
           </div>
           {% if s.last_error %}
             <div class="text-xs text-red-700 mt-1 truncate">{{ s.last_error }}</div>
@@ -67,7 +72,7 @@
         </div>
       </div>
     {% endfor %}
-    {% if sources|length == 0 %}
+    {% if items|length == 0 %}
       <div class="px-4 py-8 text-sm text-slate-600">暂无采集源。先新增一个采集源，再点“立即采集”。</div>
     {% endif %}
   </div>

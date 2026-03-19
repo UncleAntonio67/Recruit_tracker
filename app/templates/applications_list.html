@@ -8,12 +8,12 @@
     <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications/new">新建投递</a>
   </div>
 
-  <form class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white border rounded p-4" method="get" action="/applications">
+  <form class="mt-5 grid grid-cols-1 md:grid-cols-12 gap-3 bg-white border rounded p-4" method="get" action="/applications">
     <div class="md:col-span-2">
       <label class="block text-xs text-slate-600">关键词</label>
       <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
     </div>
-    <div>
+    <div class="md:col-span-2">
       <label class="block text-xs text-slate-600">阶段</label>
       <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
         <option value="">全部</option>
@@ -21,6 +21,41 @@
           <option value="{{ s }}" {% if filters.stage == s %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">城市</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="city">
+        <option value="">全部</option>
+        {% for c in city_options %}
+          <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">渠道</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="channel">
+        <option value="">全部</option>
+        {% for ch in channels %}
+          <option value="{{ ch }}" {% if filters.channel == ch %}selected{% endif %}>{{ ch }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">优先级</label>
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="priority">
+        <option value="">全部</option>
+        {% for p in ["1","2","3","4","5"] %}
+          <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">投递时间从</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_from" value="{{ filters.applied_from }}" />
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-600">到</label>
+      <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_to" value="{{ filters.applied_to }}" />
     </div>
     <div class="flex items-end gap-2">
       <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
@@ -30,18 +65,25 @@
 
   <div class="mt-5 bg-white border rounded overflow-hidden">
     <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">
-      <div class="col-span-5">岗位</div>
+      <div class="col-span-4">岗位</div>
       <div class="col-span-3">公司</div>
+      <div class="col-span-2">城市</div>
       <div class="col-span-2">阶段</div>
-      <div class="col-span-2">优先级</div>
+      <div class="col-span-1">优先</div>
     </div>
     {% for a in apps %}
       <a class="block hover:bg-slate-50" href="/applications/{{ a.id }}">
         <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b">
-          <div class="col-span-5 font-medium">{{ a.title_text }}</div>
+          <div class="col-span-4 font-medium">
+            {{ a.title_text }}
+            {% if a.applied_at %}
+              <div class="text-xs text-slate-500 mt-1">投递: {{ a.applied_at | fmt_dt("%Y-%m-%d") }}</div>
+            {% endif %}
+          </div>
           <div class="col-span-3 text-slate-700">{{ a.company_text or "-" }}</div>
+          <div class="col-span-2 text-slate-700">{{ a.city_text or "-" }}</div>
           <div class="col-span-2 text-slate-700">{{ stage_labels.get(a.stage, a.stage) }}</div>
-          <div class="col-span-2 text-slate-700">{{ a.priority }}</div>
+          <div class="col-span-1 text-slate-700">{{ a.priority }}</div>
         </div>
       </a>
     {% endfor %}

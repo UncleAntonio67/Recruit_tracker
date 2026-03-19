@@ -3,6 +3,8 @@
 import os
 import json
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
@@ -69,13 +71,25 @@ def sources_list(
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
     sources = db.execute(select(CrawlSource).order_by(CrawlSource.created_at.desc())).scalars().all()
+    crawl_interval_hours = int((os.environ.get("CRAWL_INTERVAL_HOURS") or "0").strip() or 0)
+    items = []
+    for s in sources:
+        next_run_at = None
+        if crawl_interval_hours > 0 and s.last_run_at is not None:
+            try:
+                next_run_at = s.last_run_at + timedelta(hours=crawl_interval_hours)
+            except Exception:
+                next_run_at = None
+        items.append({"source": s, "next_run_at": next_run_at})
     return templates.TemplateResponse(
         "admin_sources.html",
         {
             "request": request,
             "user": admin,
-            "sources": sources,
-            "crawl_interval_hours": int((os.environ.get("CRAWL_INTERVAL_HOURS") or "0").strip() or 0),
+            "items": items,
+            "crawl_interval_hours": crawl_interval_hours,
+            "crawl_mode": (os.environ.get("CRAWL_MODE") or "official").strip() or "official",
+            "crawl_since_days": int((os.environ.get("CRAWL_SINCE_DAYS") or "180").strip() or 180),
         },
     )
 

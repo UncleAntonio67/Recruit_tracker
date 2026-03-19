@@ -1,0 +1,107 @@
+param(
+  [string]$HostAddress = "127.0.0.1",
+  [int]$Port = 8011,
+  [string]$AdminUser = "admin",
+  [string]$AdminPass = "change-me",
+  [int]$TimeoutSec = 25
+)
+
+$ErrorActionPreference = "Stop"
+
+function Wait-HttpOk([string]$Url, [int]$TimeoutSec) {
+  $deadline = (Get-Date).AddSeconds($TimeoutSec)
+  while ((Get-Date) -lt $deadline) {
+    try {
+      $r = Invoke-WebRequest -UseBasicParsing -Uri $Url -Method GET -TimeoutSec 3
+      if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { return $true }
+    } catch {
+      Start-Sleep -Milliseconds 250
+    }
+  }
+  return $false
+}
+
+$repo = Split-Path -Parent $PSScriptRoot
+$python = Join-Path $repo ".venv\\Scripts\\python.exe"
+if (-not (Test-Path $python)) {
+  throw "python not found: $python (please run scripts/run_local.ps1 once to create venv)"
+}
+
+$baseUrl = "http://$HostAddress`:$Port"
+
+Write-Host "Starting server at $baseUrl ..."
+$env:BOOTSTRAP_ADMIN_USERNAME = $AdminUser
+$env:BOOTSTRAP_ADMIN_PASSWORD = $AdminPass
+$env:CRAWL_INTERVAL_HOURS = "0"
+$env:ENV = "dev"
+
+$p = Start-Process -FilePath $python -ArgumentList @(
+  "-m", "uvicorn", "main:app",
+  "--host", $HostAddress,
+  "--port", "$Port"
+) -WorkingDirectory $repo -PassThru -WindowStyle Hidden
+
+try {
+  if (-not (Wait-HttpOk "$baseUrl/login" $TimeoutSec)) {
+    throw "server did not become ready within ${TimeoutSec}s"
+  }
+
+  $sess = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+
+  # Login
+  $loginResp = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri "$baseUrl/login" -Method POST -Body @{
+    username = $AdminUser
+    password = $AdminPass
+  } -MaximumRedirection 0 -ErrorAction SilentlyContinue
+  if ($loginResp.StatusCode -ne 302) {
+    throw "login failed, status=$($loginResp.StatusCode)"
+  }
+
+  # Basic pages
+  foreach ($path in @("/jobs", "/companies", "/applications", "/jobs/import", "/admin/sources")) {
+    $r = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri ($baseUrl + $path) -Method GET
+    if ($r.StatusCode -ne 200) { throw "GET $path failed: $($r.StatusCode)" }
+  }
+
+  # Create an application (ASCII-only payload to avoid terminal encoding pitfalls)
+  $title = "smoke-test-" + ([Guid]::NewGuid().ToString("N").Substring(0, 8))
+  $newResp = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri "$baseUrl/applications/new" -Method POST -Body @{
+    title_text = $title
+    company_text = "TestCo"
+    city_text = "Beijing"
+    source_url = "https://example.com"
+    channel_other = "smoke"
+    stage = "applied"
+    priority = "3"
+    applied_at = (Get-Date).ToString("yyyy-MM-ddTHH:mm")
+  } -MaximumRedirection 0 -ErrorAction SilentlyContinue
+
+  if ($newResp.StatusCode -ne 302) {
+    throw "create application failed, status=$($newResp.StatusCode)"
+  }
+
+  $loc = $newResp.Headers["Location"]
+  if (-not $loc) { throw "missing redirect location for new application" }
+  $appUrl = if ($loc.StartsWith("http")) { $loc } else { $baseUrl + $loc }
+
+  # Add an event
+  $evResp = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri ($appUrl + "/events") -Method POST -Body @{
+    event_type = "Interview1"
+    occurred_at = (Get-Date).ToString("yyyy-MM-ddTHH:mm")
+    result = "pass"
+    note = "smoke test event"
+  } -MaximumRedirection 0 -ErrorAction SilentlyContinue
+  if ($evResp.StatusCode -ne 302) {
+    throw "add event failed, status=$($evResp.StatusCode)"
+  }
+
+  $detail = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri $appUrl -Method GET
+  if ($detail.StatusCode -ne 200) { throw "GET application detail failed: $($detail.StatusCode)" }
+  if ($detail.Content -notmatch "smoke test event") { throw "event note not found in detail page" }
+
+  Write-Host "SMOKE TEST OK"
+} finally {
+  Write-Host "Stopping server pid=$($p.Id) ..."
+  try { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } catch {}
+}
+

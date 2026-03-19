@@ -1,0 +1,129 @@
+[
+  {
+    "name": "国家电网",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京(及全国直属单位)",
+    "focus_directions": "电力物联网后台、业务系统开发、数据中心研发",
+    "recruitment_url": "https://zhaopin.sgcc.com.cn",
+    "website": ""
+  },
+  {
+    "name": "国家能源集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "能源信息化系统、后端开发、工业互联网平台",
+    "recruitment_url": "https://zhaopin.chnenergy.com.cn",
+    "website": ""
+  },
+  {
+    "name": "中国电科第十八研究所",
+    "company_type": "国企/研究所",
+    "industry": "电池与新能源",
+    "hq_location": "天津",
+    "focus_directions": "国家级化学与物理电源(电池)研究、BMS控制软件开发",
+    "recruitment_url": "",
+    "website": ""
+  },
+  {
+    "name": "宁德时代",
+    "company_type": "民企/龙头",
+    "industry": "电池与新能源",
+    "hq_location": "福建/上海/北京等",
+    "focus_directions": "BMS软件、数据分析、前后端开发",
+    "recruitment_url": "https://talent.catl.com",
+    "website": ""
+  },
+  {
+    "name": "比亚迪",
+    "company_type": "民企/龙头",
+    "industry": "电池与新能源",
+    "hq_location": "深圳/西安/北京等",
+    "focus_directions": "新能源汽车软件架构、全栈开发、前端/UI交互开发",
+    "recruitment_url": "https://job.byd.com",
+    "website": ""
+  },
+  {
+    "name": "建信金科",
+    "company_type": "银行系科技",
+    "industry": "银行与金融科技",
+    "hq_location": "北京/上海/厦门",
+    "focus_directions": "金融后台架构、小程序/APP开发、财富管理系统研发",
+    "recruitment_url": "https://job.ccb.com",
+    "website": ""
+  },
+  {
+    "name": "工银科技",
+    "company_type": "银行系科技",
+    "industry": "银行与金融科技",
+    "hq_location": "北京/雄安/上海",
+    "focus_directions": "银行核心系统研发、前端开发、大数据应用平台",
+    "recruitment_url": "https://job.icbc.com.cn",
+    "website": ""
+  },
+  {
+    "name": "农银金科",
+    "company_type": "银行系科技",
+    "industry": "银行与金融科技",
+    "hq_location": "北京",
+    "focus_directions": "数字化转型项目、前后端研发、金融BI系统",
+    "recruitment_url": "https://career.abchina.com.cn",
+    "website": ""
+  },
+  {
+    "name": "中国软件",
+    "company_type": "央企/国企",
+    "industry": "科技与软件",
+    "hq_location": "北京",
+    "focus_directions": "操作系统生态研发、政务软件前端/后端、中间件开发",
+    "recruitment_url": "https://www.css.com.cn",
+    "website": "https://www.css.com.cn"
+  },
+  {
+    "name": "中国科学院计算技术研究所",
+    "company_type": "研究所",
+    "industry": "科技与软件",
+    "hq_location": "北京",
+    "focus_directions": "大模型应用、数据智能(BI)、底层架构",
+    "recruitment_url": "http://www.ict.cas.cn/rcdw/zpzl/",
+    "website": "http://www.ict.cas.cn"
+  },
+  {
+    "name": "中国移动信息技术中心",
+    "company_type": "央企",
+    "industry": "科技与软件",
+    "hq_location": "北京",
+    "focus_directions": "业务中台研发、全栈工程师、管理系统前后端开发",
+    "recruitment_url": "https://job.10086.cn",
+    "website": ""
+  },
+  {
+    "name": "太极计算机",
+    "company_type": "国企/电科系",
+    "industry": "科技与软件",
+    "hq_location": "北京",
+    "focus_directions": "政务云平台、软件系统集成、全栈开发",
+    "recruitment_url": "https://www.taiji.com.cn",
+    "website": "https://www.taiji.com.cn"
+  },
+  {
+    "name": "中核集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京(及全国)",
+    "focus_directions": "能源/核工业信息化、研发与工程技术、软件与数据岗位",
+    "recruitment_url": "https://cnnc.zhiye.com/shehui",
+    "website": ""
+  },
+  {
+    "name": "上海电气",
+    "company_type": "地方国企/头部",
+    "industry": "能源与电力",
+    "hq_location": "上海",
+    "focus_directions": "新能源装备、储能、电化学、新材料、智能制造方向研发",
+    "recruitment_url": "http://sec.hotjob.cn/",
+    "website": ""
+  }
+]
+

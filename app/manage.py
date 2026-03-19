@@ -300,6 +300,34 @@ def cmd_import_companies_tsv(args: argparse.Namespace) -> None:
                 enabled = False
                 disabled += 1
 
+            # Avoid auto-crawling large job platforms that typically require interactive search/login and have strict ToS.
+            # Users can still use /jobs/import (URL prefill) or url_list for explicit job detail URLs.
+            try:
+                from urllib.parse import urlparse
+
+                host = (urlparse(rec_url).netloc or "").lower().strip()
+            except Exception:
+                host = ""
+            platform_block = [
+                "www.zhipin.com",  # Boss直聘
+                "zhipin.com",
+                "jobs.51job.com",
+                "www.51job.com",
+                "51job.com",
+                "www.indeed.com",
+                "indeed.com",
+                "www.zhaopin.com",  # 智联
+                "zhaopin.com",
+                "www.liepin.com",
+                "liepin.com",
+                "zhaopin.58.com",
+                "58.com",
+            ]
+            if host and any(host == h or host.endswith("." + h) for h in platform_block):
+                if enabled:
+                    enabled = False
+                    disabled += 1
+
             kind = "html_list"
             cfg: dict = {}
 

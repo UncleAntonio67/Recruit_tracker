@@ -3,6 +3,7 @@
 import gzip
 import json
 import zlib
+from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener
 
 _DEFAULT_HEADERS = {
@@ -69,6 +70,9 @@ def get_json(
     headers: dict[str, str] | None = None,
 ):
     text = get_text(url, proxy=proxy, timeout=timeout, headers=headers)
+    # Some domestic ATS endpoints return JSON with UTF-8 BOM.
+    if text.startswith("\ufeff"):
+        text = text.lstrip("\ufeff")
     return json.loads(text)
 
 
@@ -85,4 +89,31 @@ def post_json(
     if headers:
         hdrs.update({str(k): str(v) for k, v in headers.items()})
     raw = request_bytes(url, method="POST", data=body, proxy=proxy, timeout=timeout, headers=hdrs)
-    return json.loads(raw.decode("utf-8", errors="ignore"))
+    text = raw.decode("utf-8", errors="ignore")
+    if text.startswith("\ufeff"):
+        text = text.lstrip("\ufeff")
+    return json.loads(text)
+
+
+def post_form(
+    url: str,
+    payload: dict | None = None,
+    *,
+    proxy: str | None = None,
+    timeout: int = 30,
+    headers: dict[str, str] | None = None,
+):
+    """POST x-www-form-urlencoded and decode JSON response.
+
+    Hotjob/Wecruit and some domestic ATS backends expect form posts rather than JSON.
+    """
+
+    body = urlencode(payload or {}).encode("utf-8")
+    hdrs = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json, text/plain, */*"}
+    if headers:
+        hdrs.update({str(k): str(v) for k, v in headers.items()})
+    raw = request_bytes(url, method="POST", data=body, proxy=proxy, timeout=timeout, headers=hdrs)
+    text = raw.decode("utf-8", errors="ignore")
+    if text.startswith("\ufeff"):
+        text = text.lstrip("\ufeff")
+    return json.loads(text)

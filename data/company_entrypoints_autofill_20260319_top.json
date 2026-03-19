@@ -1,0 +1,191 @@
+[
+  {
+    "name": "oppo",
+    "company_type": "头部大厂",
+    "industry": "科技与软件",
+    "hq_location": "东莞",
+    "focus_directions": "软件研发/系统/数据/平台",
+    "website": "https://www.oppo.com",
+    "recruitment_url": "https://careers.oppo.com/"
+  },
+  {
+    "name": "一汽（红旗）",
+    "company_type": "央企",
+    "industry": "新能源与汽车",
+    "hq_location": "长春",
+    "focus_directions": "智能网联/软件/数据/研发",
+    "website": "https://www.faw.com.cn/",
+    "recruitment_url": "http://zhaopin.faw.com.cn"
+  },
+  {
+    "name": "三峡集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "能源信息化/数字化/数据/研发",
+    "website": "https://www.ctg.com.cn/",
+    "recruitment_url": "https://chrcmp.chinahr.com/pages/sanxia/"
+  },
+  {
+    "name": "东风岚图汽车",
+    "company_type": "央企子公司",
+    "industry": "新能源与汽车",
+    "hq_location": "武汉",
+    "focus_directions": "智能网联/软件/数据/研发",
+    "website": "https://www.voyah.com.cn/",
+    "recruitment_url": "https://www.voyah.com.cn/joinus.html"
+  },
+  {
+    "name": "东风汽车研发总院",
+    "company_type": "央企",
+    "industry": "新能源与汽车",
+    "hq_location": "武汉",
+    "focus_directions": "智能网联/软件/数据/研发",
+    "website": "https://www.dfmc.com.cn/",
+    "recruitment_url": "https://dfmc.hotjob.cn/"
+  },
+  {
+    "name": "上海电气",
+    "company_type": "央企/国企",
+    "industry": "高端装备/能源与电力",
+    "hq_location": "上海",
+    "focus_directions": "信息化/后端/数据/平台/项目管理",
+    "website": "https://www.shanghai-electric.com/",
+    "recruitment_url": "https://sec.hotjob.cn/"
+  },
+  {
+    "name": "国家电投",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "新能源/储能/数字化/信息化",
+    "website": "https://www.spic.com.cn/",
+    "recruitment_url": "https://zhaopin.spic.com.cn/hrjs/"
+  },
+  {
+    "name": "国家管网",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "能源基础设施/信息化/数据/平台",
+    "website": "https://www.pipechina.com.cn/",
+    "recruitment_url": "https://zhaopin.pipechina.com.cn/"
+  },
+  {
+    "name": "中国石油集团",
+    "company_type": "央企",
+    "industry": "能源与化工",
+    "hq_location": "北京",
+    "focus_directions": "能源/化工/数字化/信息化",
+    "website": "https://www.cnpc.com.cn/",
+    "recruitment_url": "https://zhaopin.cnpc.com.cn/"
+  },
+  {
+    "name": "中国石油化工集团",
+    "company_type": "央企",
+    "industry": "能源与化工",
+    "hq_location": "北京",
+    "focus_directions": "炼化/新材料/数字化/信息化",
+    "website": "http://www.sinopecgroup.com/",
+    "recruitment_url": "http://job.sinopec.com"
+  },
+  {
+    "name": "华为",
+    "company_type": "头部大厂",
+    "industry": "科技与软件",
+    "hq_location": "深圳",
+    "focus_directions": "软件/云/数据/AI/架构",
+    "website": "https://www.huawei.com/",
+    "recruitment_url": "https://career.huawei.com/reccampportal/"
+  },
+  {
+    "name": "小米",
+    "company_type": "头部大厂",
+    "industry": "科技与软件",
+    "hq_location": "北京",
+    "focus_directions": "软件/互联网/AIoT/数据/平台",
+    "website": "https://www.mi.com/",
+    "recruitment_url": "https://hr.xiaomi.com/job/list/0-0-2-0-20"
+  },
+  {
+    "name": "小鹏汽车",
+    "company_type": "头部大厂",
+    "industry": "新能源与汽车",
+    "hq_location": "广州",
+    "focus_directions": "智能驾驶/软件/数据/平台",
+    "website": "https://www.xiaopeng.com/",
+    "recruitment_url": "https://social.xiaopeng.com"
+  },
+  {
+    "name": "长安汽车",
+    "company_type": "国企/央企系",
+    "industry": "新能源与汽车",
+    "hq_location": "重庆",
+    "focus_directions": "智能网联/软件/架构/项目管理",
+    "website": "",
+    "recruitment_url": "https://changan.zhiye.com/social/jobs"
+  },
+  {
+    "name": "北方华创",
+    "company_type": "国企",
+    "industry": "科技与软件",
+    "hq_location": "北京",
+    "focus_directions": "半导体设备/软件/数据/研发",
+    "website": "https://www.naura.com/",
+    "recruitment_url": "https://bfhc.zhiye.com/"
+  },
+  {
+    "name": "中芯国际",
+    "company_type": "头部大厂",
+    "industry": "科技与软件",
+    "hq_location": "上海",
+    "focus_directions": "制造IT/数据治理/开发/算法/平台",
+    "website": "https://www.smics.com/",
+    "recruitment_url": "https://smics.zhiye.com/"
+  },
+  {
+    "name": "阳光电源",
+    "company_type": "头部大厂",
+    "industry": "新能源与储能",
+    "hq_location": "合肥",
+    "focus_directions": "储能/电力电子/软件/数据/平台",
+    "website": "https://www.sungrowpower.com/",
+    "recruitment_url": "https://jobs.sungrowpower.com/"
+  },
+  {
+    "name": "华电集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "新能源/数字化/信息化",
+    "website": "https://www.chd.com.cn/",
+    "recruitment_url": "https://rencaishichang.chd.com.cn"
+  },
+  {
+    "name": "华能集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "新能源/数字化/信息化",
+    "website": "https://www.chng.com.cn/",
+    "recruitment_url": "https://zhaopin.chng.com.cn"
+  },
+  {
+    "name": "大唐集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "新能源/数字化/信息化",
+    "website": "https://www.china-cdt.com/",
+    "recruitment_url": "https://zhaopin.china-cdt.com/"
+  },
+  {
+    "name": "国能集团",
+    "company_type": "央企",
+    "industry": "能源与电力",
+    "hq_location": "北京",
+    "focus_directions": "能源信息化/工业互联网/后端/数据",
+    "website": "",
+    "recruitment_url": "https://zhaopin.chnenergy.com.cn"
+  }
+]

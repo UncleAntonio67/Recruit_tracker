@@ -32,12 +32,13 @@
       </div>
       <div>
         <label class="block text-xs text-slate-600">投递类型/渠道(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="channel" list="channel_options" value="{{ prefill.channel }}" placeholder="选择或输入" />
-        <datalist id="channel_options">
+        <select class="mt-1 w-full px-3 py-2 border rounded" name="channel_select">
+          <option value="">不填</option>
           {% for ch in channels %}
-            <option value="{{ ch }}"></option>
+            <option value="{{ ch }}" {% if prefill.channel == ch %}selected{% endif %}>{{ ch }}</option>
           {% endfor %}
-        </datalist>
+        </select>
+        <input class="mt-2 w-full px-3 py-2 border rounded" name="channel_other" placeholder="其他(可选, 手动输入)" value="" />
       </div>
       <div class="md:col-span-2">
         <label class="block text-xs text-slate-600">原文链接(可选)</label>

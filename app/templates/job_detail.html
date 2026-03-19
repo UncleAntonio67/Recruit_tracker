@@ -10,10 +10,19 @@
         {% if job.salary_text %} · 薪资: {{ job.salary_text }}{% endif %}
       </p>
     </div>
-    <form class="flex items-end gap-2" method="post" action="/jobs/{{ job.id }}/apply">
+    <form class="flex items-end gap-2 flex-wrap" method="post" action="/jobs/{{ job.id }}/apply">
       <div>
         <label class="block text-xs text-slate-600">投递渠道(可选)</label>
-        <input class="mt-1 px-3 py-2 border rounded" name="channel" placeholder="官网/内推/..." />
+        <select class="mt-1 px-3 py-2 border rounded" name="channel_select">
+          <option value="">不填</option>
+          {% for ch in ["官网网申","国聘","Boss","前程无忧(51job)","Indeed","内推","猎头","公众号","邮件","其他"] %}
+            <option value="{{ ch }}">{{ ch }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600">其他(可选)</label>
+        <input class="mt-1 px-3 py-2 border rounded" name="channel_other" placeholder="例如: 某同事内推/某群" />
       </div>
       <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">创建投递记录</button>
     </form>

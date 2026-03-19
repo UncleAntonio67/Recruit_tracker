@@ -514,6 +514,8 @@ def create_application_from_job(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
     channel: str | None = Form(default=None),
+    channel_select: str | None = Form(default=None),
+    channel_other: str | None = Form(default=None),
 ) -> RedirectResponse:
     job = db.get(JobPosting, job_id)
     if not job:
@@ -522,6 +524,7 @@ def create_application_from_job(
     comp = db.get(Company, job.company_id) if job.company_id else None
     src_url = db.execute(select(JobSource.source_url).where(JobSource.job_posting_id == job.id)).scalar_one_or_none()
 
+    picked_channel = (channel_other or "").strip() or (channel_select or "").strip() or (channel or "").strip() or None
     app = Application(
         owner_user_id=user.id,
         job_posting_id=job.id,
@@ -529,7 +532,7 @@ def create_application_from_job(
         title_text=job.title,
         city_text=job.city,
         source_url=src_url,
-        channel=channel.strip() if channel else None,
+        channel=picked_channel,
         stage="未投递",
         priority=3,
     )

@@ -52,12 +52,13 @@
         </div>
         <div>
           <label class="block text-xs text-slate-600">投递类型/渠道</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" name="channel" list="channel_options" value="{{ app.channel or '' }}" placeholder="选择或输入" />
-          <datalist id="channel_options">
+          <select class="mt-1 w-full px-3 py-2 border rounded" name="channel_select">
+            <option value="">不填</option>
             {% for ch in channels %}
-              <option value="{{ ch }}"></option>
+              <option value="{{ ch }}" {% if (app.channel or '') == ch %}selected{% endif %}>{{ ch }}</option>
             {% endfor %}
-          </datalist>
+          </select>
+          <input class="mt-2 w-full px-3 py-2 border rounded" name="channel_other" placeholder="其他(可选, 手动输入)" value="" />
         </div>
         <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">保存</button>
       </form>

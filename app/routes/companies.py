@@ -173,6 +173,18 @@ def company_seed_source(
                     "max_pages": 40,
                     "source_type": "official",
                 }
+        elif host.endswith(".hotjob.cn") or host == "hotjob.cn":
+            # Hotjob official portal (wecruit public endpoints).
+            kind = "hotjob"
+            base = f"{p.scheme or 'https'}://{host}" if host else rec_url
+            cfg = {
+                "base_url": base.replace("http://", "https://"),
+                "company_name": c.name,
+                "recruit_type": 2,  # 社招
+                "page_size": 12,
+                "max_pages": 12,
+                "source_type": "official",
+            }
     except Exception:
         pass
 

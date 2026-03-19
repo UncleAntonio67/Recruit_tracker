@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou, url_list, m_zhiye
+from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou, url_list, m_zhiye, hotjob
 from app.crawler.job_types import RawJob
 from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, find_salary_text, is_recent, parse_salary_k, sha1, utcnow
 from app.models import Company, CrawlSource, JobPosting, JobSource
@@ -155,7 +155,10 @@ def _passes_filters(raw: RawJob, cfg: dict) -> bool:
         return False
 
     # Always require "tech-ish" signal to avoid collecting massive irrelevant postings.
-    global_include_any = [
+    #
+    # Note: "研发/研究" are intentionally treated as *soft* signals, because they can match too much.
+    # We only allow them to pass when combined with新能源/电池/化工等方向关键词。
+    hard_tech_any = [
         # Software / data / infra
         "开发",
         "工程师",
@@ -182,7 +185,15 @@ def _passes_filters(raw: RawJob, cfg: dict) -> bool:
         "支付",
         "风控",
         "核心系统",
-        # New energy / battery / chemical
+        # PM / architecture management (avoid plain "PM" which is noisy)
+        "项目管理",
+        "项目经理",
+        "交付",
+        "实施",
+        "架构管理",
+        "企业架构",
+    ]
+    energy_any = [
         "新能源",
         "储能",
         "锂电",
@@ -192,10 +203,19 @@ def _passes_filters(raw: RawJob, cfg: dict) -> bool:
         "电化学",
         "材料",
         "化工",
-        "研发",
-        "研究",
+        "pack",
+        "正极",
+        "负极",
+        "电解液",
+        "隔膜",
     ]
-    if not any(k.lower() in text for k in global_include_any):
+    soft_any = ["研发", "研究"]
+
+    hard_hit = any(k.lower() in text for k in hard_tech_any)
+    energy_hit = any(k.lower() in text for k in energy_any)
+    soft_hit = any(k.lower() in text for k in soft_any)
+
+    if not (hard_hit or energy_hit or (soft_hit and energy_hit)):
         return False
 
     include_kws = [str(x).lower() for x in (cfg.get("include_keywords") or []) if str(x).strip()]
@@ -264,6 +284,9 @@ def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
             src_type = cfg.get("source_type") or "import"
         elif s.kind == "m_zhiye":
             raw_jobs = m_zhiye.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        elif s.kind == "hotjob":
+            raw_jobs = hotjob.fetch(cfg, proxy=cfg.get("proxy"))
             src_type = cfg.get("source_type") or "official"
         else:
             raise ValueError(f"unknown kind: {s.kind}")

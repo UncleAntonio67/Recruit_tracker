@@ -85,7 +85,7 @@ def sources_new_page(
     request: Request,
     admin: User = Depends(require_admin),
 ) -> HTMLResponse:
-    kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "greenhouse", "lever", "rss", "html_list", "url_list"]
+    kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "hotjob", "greenhouse", "lever", "rss", "html_list", "url_list"]
     default_config = '{\n  "company_name": "",\n  "...": ""\n}'
     return templates.TemplateResponse(
         "admin_source_new.html",
@@ -106,7 +106,7 @@ def sources_new_post(
     try:
         cfg = json.loads(config_json) if config_json.strip() else {}
     except Exception:
-        kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "greenhouse", "lever", "rss", "html_list", "url_list"]
+        kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "hotjob", "greenhouse", "lever", "rss", "html_list", "url_list"]
         return templates.TemplateResponse(
             "admin_source_new.html",
             {"request": request, "user": admin, "kinds": kinds, "error": "config_json 不是合法 JSON", "config_json": config_json},
@@ -115,7 +115,7 @@ def sources_new_post(
 
     exists = db.execute(select(CrawlSource).where(CrawlSource.name == name.strip())).scalar_one_or_none()
     if exists:
-        kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "greenhouse", "lever", "rss", "html_list", "url_list"]
+        kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "hotjob", "greenhouse", "lever", "rss", "html_list", "url_list"]
         return templates.TemplateResponse(
             "admin_source_new.html",
             {"request": request, "user": admin, "kinds": kinds, "error": "名称已存在", "config_json": config_json},

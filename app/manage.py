@@ -411,6 +411,19 @@ def cmd_seed_official_html_sources(args: argparse.Namespace) -> None:
                 return None
             return None
 
+        def _is_hotjob(url: str) -> bool:
+            u = (url or "").strip().lower()
+            if not u:
+                return False
+            try:
+                from urllib.parse import urlparse
+
+                p = urlparse(u)
+                host = (p.netloc or "").lower()
+            except Exception:
+                return False
+            return host.endswith(".hotjob.cn") or host == "hotjob.cn"
+
         created = 0
         updated = 0
         for c in companies:
@@ -429,6 +442,25 @@ def cmd_seed_official_html_sources(args: argparse.Namespace) -> None:
                     "jc": 1,  # 社招
                     "page_size": 30,
                     "max_pages": 30,
+                    "source_type": "official",
+                }
+            elif _is_hotjob(rec_url):
+                # Hotjob (大易/微招聘) official portal, use wecruit public endpoints.
+                kind = "hotjob"
+                # Normalize to origin only. (http -> https is fine)
+                try:
+                    from urllib.parse import urlparse
+
+                    p = urlparse(rec_url)
+                    base = f"{p.scheme or 'https'}://{p.netloc}" if p.netloc else rec_url
+                except Exception:
+                    base = rec_url
+                cfg = {
+                    "base_url": base.replace("http://", "https://"),
+                    "company_name": name,
+                    "recruit_type": 2,  # 社招
+                    "page_size": 12,
+                    "max_pages": 12,
                     "source_type": "official",
                 }
             else:

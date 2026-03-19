@@ -256,6 +256,19 @@ def cmd_seed_default(args: argparse.Namespace) -> None:
                 "exclude_keywords": exclude,
             },
         ),
+        (
+            "hotjob",
+            "上海电气",
+            {
+                "company_name": "上海电气",
+                "base_url": "https://sec.hotjob.cn",
+                "recruit_type": 2,  # 社招
+                "page_size": 12,
+                "max_pages": 10,
+                "include_keywords": include,
+                "exclude_keywords": exclude,
+            },
+        ),
     ]
 
     db = SessionLocal()
@@ -339,6 +352,28 @@ def cmd_run(args: argparse.Namespace) -> None:
         db.close()
 
 
+def cmd_run_one(args: argparse.Namespace) -> None:
+    from app.crawler.runner import run_one
+
+    db = SessionLocal()
+    try:
+        source_id = (args.source_id or "").strip()
+        if not source_id:
+            # Resolve by name for convenience (non-unique names are unlikely but possible).
+            name = (args.name or "").strip()
+            if not name:
+                raise SystemExit("run-one requires --source-id or --name")
+            src = db.execute(select(CrawlSource).where(CrawlSource.name == name)).scalar_one_or_none()
+            if not src:
+                raise SystemExit(f"source not found by name: {name}")
+            source_id = src.id
+
+        stats = run_one(db, source_id=source_id, since_days=args.since_days)
+        print(json.dumps(stats, ensure_ascii=False, indent=2))
+    finally:
+        db.close()
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="python -m app.crawl")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -350,7 +385,7 @@ def main() -> None:
     ad.add_argument(
         "--kind",
         required=True,
-        choices=["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "greenhouse", "lever", "rss", "html_list", "url_list"],
+        choices=["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "hotjob", "greenhouse", "lever", "rss", "html_list", "url_list"],
     )
     ad.add_argument("--name", required=True)
     ad.add_argument("--disabled", action="store_true")
@@ -372,6 +407,12 @@ def main() -> None:
     rn.add_argument("--since-days", type=int, default=180)
     rn.add_argument("--mode", choices=["core", "all"], default="core")
     rn.set_defaults(fn=cmd_run)
+
+    r1 = sub.add_parser("run-one")
+    r1.add_argument("--since-days", type=int, default=180)
+    r1.add_argument("--source-id", default="")
+    r1.add_argument("--name", default="")
+    r1.set_defaults(fn=cmd_run_one)
 
     args = p.parse_args()
     args.fn(args)

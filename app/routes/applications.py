@@ -214,6 +214,8 @@ def application_new_post(
     city_text: str | None = Form(default=None),
     source_url: str | None = Form(default=None),
     channel: str | None = Form(default=None),
+    channel_select: str | None = Form(default=None),
+    channel_other: str | None = Form(default=None),
     stage: str = Form(default="未投递"),
     priority: int = Form(default=3),
     applied_at: str | None = Form(default=None),
@@ -230,6 +232,8 @@ def application_new_post(
         except ValueError:
             applied_dt = None
 
+    picked_channel = (channel_other or "").strip() or (channel_select or "").strip() or (channel or "").strip() or None
+
     app = Application(
         owner_user_id=user.id,
         job_posting_id=None,
@@ -237,7 +241,7 @@ def application_new_post(
         title_text=title_text.strip(),
         city_text=city_text.strip() if city_text else None,
         source_url=source_url.strip() if source_url else None,
-        channel=channel.strip() if channel else None,
+        channel=picked_channel,
         stage=stage_s,
         priority=int(priority),
         created_at=now,
@@ -306,6 +310,8 @@ def application_update(
     city_text: str | None = Form(default=None),
     source_url: str | None = Form(default=None),
     channel: str | None = Form(default=None),
+    channel_select: str | None = Form(default=None),
+    channel_other: str | None = Form(default=None),
     applied_at: str | None = Form(default=None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -328,7 +334,8 @@ def application_update(
     app.company_text = company_text.strip() if company_text else None
     app.city_text = city_text.strip() if city_text else None
     app.source_url = source_url.strip() if source_url else None
-    app.channel = channel.strip() if channel else None
+    picked_channel = (channel_other or "").strip() or (channel_select or "").strip() or (channel or "").strip() or None
+    app.channel = picked_channel
 
     app.updated_at = datetime.now(UTC)
     db.add(app)

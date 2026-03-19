@@ -124,6 +124,8 @@ def parse_salary_k(salary_text: str | None) -> tuple[int | None, int | None]:
     - "20K-40K"
     - "2-4万"
     - "30k"
+    - "30-50万/年"
+    - "40万/年"
 
     Non-goals: yearly packages, stock, bonus months, etc.
     """
@@ -154,6 +156,14 @@ def parse_salary_k(salary_text: str | None) -> tuple[int | None, int | None]:
         a, b = int(m.group(1)) * 10, int(m.group(2)) * 10
         return (min(a, b), max(a, b))
 
+    # Range in 万/年 (convert to k/month; 30万/年 ~= 25k/月)
+    m = re.search(r"(\d{1,3})\s*-\s*(\d{1,3})\s*万\s*/\s*年", s2)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        mn = int(round(min(a, b) * 10 / 12))
+        mx = int(round(max(a, b) * 10 / 12))
+        return (mn, mx)
+
     # Single k
     m = re.search(r"\b(\d{1,3})\s*[kK]\b", s2)
     if m:
@@ -165,6 +175,13 @@ def parse_salary_k(salary_text: str | None) -> tuple[int | None, int | None]:
     if m:
         v = int(m.group(1)) * 10
         return (v, v)
+
+    # Single 万/年
+    m = re.search(r"(\d{1,3})\s*万\s*/\s*年", s2)
+    if m:
+        v = int(m.group(1))
+        kk = int(round(v * 10 / 12))
+        return (kk, kk)
 
     return (None, None)
 
@@ -183,7 +200,13 @@ def find_salary_text(text: str | None) -> str | None:
     m = re.search(r"(\d{1,2}\s*[-～~至—]\s*\d{1,2}\s*[万wW])", s)
     if m:
         return re.sub(r"\s+", "", m.group(1))
+    m = re.search(r"(\d{1,3}\s*[-～~至—]\s*\d{1,3}\s*万\s*/\s*年)", s)
+    if m:
+        return re.sub(r"\s+", "", m.group(1))
     m = re.search(r"(\d{1,3}\s*[kK])", s)
+    if m:
+        return re.sub(r"\s+", "", m.group(1))
+    m = re.search(r"(\d{1,3}\s*万\s*/\s*年)", s)
     if m:
         return re.sub(r"\s+", "", m.group(1))
     return None

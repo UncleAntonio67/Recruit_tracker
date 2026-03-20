@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">导入结果</h1>
+  <p class="text-sm text-slate-600 mt-1">
+    file={{ filename or "-" }} · parsed={{ parsed }} · created={{ created }} · updated={{ updated }} · seeded={{ seeded }}
+  </p>
+
+  {% if errors and errors|length > 0 %}
+    <div class="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-4 max-w-3xl">
+      <div class="font-semibold">部分错误(最多显示 20 条)</div>
+      <ul class="mt-2 space-y-1">
+        {% for e in errors %}
+          <li class="break-all">{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="mt-5 flex gap-3 flex-wrap">
+    <a class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" href="/companies">查看企业列表</a>
+    <a class="px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" href="/admin/sources">查看采集源</a>
+    <a class="px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" href="/admin/companies/import">继续导入</a>
+  </div>
+{% endblock %}
+

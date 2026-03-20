@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-xl font-semibold">导入企业清单</h1>
+  <p class="text-sm text-slate-600 mt-1">支持上传 `.txt` 或 `.xlsx`，自动补充企业与官方招聘入口，并可一键生成 Official:* 采集源。</p>
+
+  <form class="mt-5 bg-white border rounded-2xl p-4 max-w-3xl shadow-sm space-y-3" method="post" action="/admin/companies/import" enctype="multipart/form-data">
+    <div>
+      <label class="block text-xs text-slate-600">文件</label>
+      <input class="mt-1 w-full" type="file" name="file" accept=".txt,.xlsx" required />
+      <div class="text-xs text-slate-500 mt-1">txt: 每行可包含“公司名 + URL”。xlsx: 自动识别包含“公司/企业/网申/招聘/链接”的列。</div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs text-slate-600">Proxy(可选)</label>
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="proxy" placeholder="http://127.0.0.1:7890" />
+        <div class="text-xs text-slate-500 mt-1">只用于生成采集源的 config.proxy，采集时可走代理。</div>
+      </div>
+      <div class="flex items-end">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" name="seed_sources" value="1" checked />
+          同步生成 Official:* 采集源
+        </label>
+      </div>
+    </div>
+
+    <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">开始导入</button>
+  </form>
+{% endblock %}
+

@@ -71,6 +71,60 @@ try {
     if ($r.StatusCode -ne 200) { throw "GET $path failed: $($r.StatusCode)" }
   }
 
+  # Seed one job near Shanghai date boundary and verify date filter is Shanghai-based.
+  @'
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import select
+
+from app.db import SessionLocal
+from app.models import Company, JobPosting, JobSource
+
+UTC = timezone.utc
+SH = timezone(timedelta(hours=8))
+
+db = SessionLocal()
+try:
+    c = db.execute(select(Company).where(Company.name == "SmokeCo")).scalar_one_or_none()
+    if not c:
+        c = Company(name="SmokeCo", recruitment_url="https://example.com")
+        db.add(c)
+        db.commit()
+
+    # 2026-03-20 00:30 in Shanghai => 2026-03-19 16:30 UTC.
+    published_utc = datetime(2026, 3, 20, 0, 30, tzinfo=SH).astimezone(UTC)
+    job = JobPosting(
+        company_id=c.id,
+        title="Smoke Engineer",
+        city="北京/上海",
+        published_at=published_utc,
+        excerpt="smoke job",
+        status="active",
+    )
+    db.add(job)
+    db.commit()
+
+    db.add(
+        JobSource(
+            job_posting_id=job.id,
+            source_type="import",
+            source_kind="url",
+            source_name="smoke",
+            source_url="https://example.com/smoke-job",
+        )
+    )
+    db.commit()
+finally:
+    db.close()
+'@ | & $python -
+  if ($LASTEXITCODE -ne 0) { throw "failed seeding smoke job" }
+
+  $jobsFiltered = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri ($baseUrl + "/jobs?published_from=2026-03-20&published_to=2026-03-20") -Method GET
+  if ($jobsFiltered.StatusCode -ne 200) { throw "GET /jobs date filter failed: $($jobsFiltered.StatusCode)" }
+  if ($jobsFiltered.Content -notmatch "Smoke Engineer") {
+    throw "job not found under Shanghai date filter (expected Smoke Engineer)"
+  }
+
   # Create an application (ASCII-only payload to avoid terminal encoding pitfalls)
   $title = "smoke-test-" + ([Guid]::NewGuid().ToString("N").Substring(0, 8))
   $newResp = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri "$baseUrl/applications/new" -Method POST -Body @{

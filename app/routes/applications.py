@@ -168,7 +168,8 @@ def applications_list(
         else:
             conds.append(Application.stage == want)
     if city:
-        conds.append(Application.city_text == city.strip())
+        # Application city may come from a job posting like "北京/上海", so use contains match.
+        conds.append(Application.city_text.ilike(f"%{city.strip()}%"))
     if channel:
         conds.append(Application.channel == channel.strip())
     if priority is not None:

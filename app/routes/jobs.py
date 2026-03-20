@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -15,6 +15,33 @@ from app.models import Application, Company, JobPosting, JobSource, User
 from app.views import templates
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+_TZ_SH = timezone(timedelta(hours=8))
+
+
+def _parse_date_input_shanghai(value: str | None, *, end_exclusive: bool = False) -> datetime | None:
+    """Parse <input type=date> as Asia/Shanghai date boundary and return UTC datetime.
+
+    Why: the UI shows dates in Asia/Shanghai. If we treat the date as UTC midnight,
+    users will see off-by-one-day filter results.
+    """
+
+    if not value:
+        return None
+    v = str(value).strip()
+    if not v:
+        return None
+    # Typical browser date input: YYYY-MM-DD
+    try:
+        if len(v) == 10 and v[4] == "-" and v[7] == "-":
+            y, m, d = int(v[0:4]), int(v[5:7]), int(v[8:10])
+            dt = datetime(y, m, d, 0, 0, tzinfo=_TZ_SH)
+            if end_exclusive:
+                dt = dt + timedelta(days=1)
+            return dt.astimezone(UTC)
+    except Exception:
+        return None
+    return None
 
 
 def _company_query_tokens(text: str) -> list[str]:
@@ -159,15 +186,13 @@ def jobs_list(
         cutoff = datetime.now(UTC) - timedelta(days=int(since_days))
         conds.append(func.coalesce(JobPosting.published_at, JobPosting.last_seen_at) >= cutoff)
 
-    pf = parse_dt(published_from) if published_from else None
-    pt = parse_dt(published_to) if published_to else None
+    # Date inputs are shown/understood as China local dates, so treat them as Shanghai boundaries.
+    pf = _parse_date_input_shanghai(published_from, end_exclusive=False) or (parse_dt(published_from) if published_from else None)
+    pt = _parse_date_input_shanghai(published_to, end_exclusive=True) or (parse_dt(published_to) if published_to else None)
     if pf:
         conds.append(JobPosting.published_at.is_not(None))
         conds.append(JobPosting.published_at >= pf)
     if pt:
-        # Make date-only inputs inclusive by treating end as [to, to+1d).
-        if pt.hour == 0 and pt.minute == 0 and pt.second == 0 and pt.microsecond == 0:
-            pt = pt + timedelta(days=1)
         conds.append(JobPosting.published_at.is_not(None))
         conds.append(JobPosting.published_at < pt)
 

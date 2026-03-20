@@ -26,6 +26,7 @@ def companies_list(
     # Keep as string because checkbox forms can submit empty/multiple values; avoid 422.
     has_entry: str | None = Query(default="1"),
     page: int = Query(default=1, ge=1, le=5000),
+    show_import: str | None = Query(default=None),
 ) -> HTMLResponse:
     page_size = 100
     stmt = select(Company).order_by(Company.name.asc())
@@ -79,6 +80,7 @@ def companies_list(
             "request": request,
             "user": user,
             "companies": companies,
+            "show_import": bool((show_import or "").strip()),
             "filters": {
                 "q": q or "",
                 "industry": industry or "",

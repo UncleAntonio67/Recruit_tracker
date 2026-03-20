@@ -7,8 +7,79 @@
         共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。
       </p>
     </div>
-    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/jobs/import">导入岗位</a>
+    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/jobs?show_import=1#import">导入岗位</a>
   </div>
+
+  <details id="import" class="mt-4" {% if show_import %}open{% endif %}>
+    <summary class="cursor-pointer text-sm text-slate-700">导入岗位(合规: 仅保存结构化字段+短摘要+原文链接)</summary>
+    <div class="mt-3 bg-white border rounded-2xl p-4 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">岗位详情页 URL</label>
+          <input id="imp-url" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" placeholder="粘贴岗位详情页链接" />
+          <div id="imp-status" class="text-xs text-slate-500 mt-1"></div>
+        </div>
+        <div class="flex items-end gap-2">
+          <button id="imp-prefill" class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="button">自动填充</button>
+          <a class="px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" href="/jobs?show_import=1#import">清空</a>
+        </div>
+      </div>
+
+      <form id="imp-form" class="mt-4 space-y-3" method="post" action="/jobs/import">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-xs text-slate-600">岗位名称</label>
+            <input id="imp-title" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="title" required />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">公司(可选)</label>
+            <input id="imp-company" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="company_name" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">城市(可选)</label>
+            <select id="imp-city" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="city">
+              <option value="">不填</option>
+              {% for c in options.cities %}
+                <option value="{{ c }}">{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">薪资(可选)</label>
+            <input id="imp-salary" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="salary_text" placeholder="例如 20-35k·14薪" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">发布时间(可选)</label>
+            <input id="imp-published" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" type="date" name="published_at" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs text-slate-600">原文链接(URL)</label>
+            <input id="imp-source" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="source_url" required />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs text-slate-600">摘要(可选, 建议保留要点, 不要粘贴整页)</label>
+            <textarea id="imp-excerpt" class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[140px]" name="excerpt" placeholder="岗位职责/任职要求/技术栈要点..."></textarea>
+          </div>
+        </div>
+        <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">导入</button>
+      </form>
+
+      <details class="mt-4">
+        <summary class="cursor-pointer text-sm text-slate-700">批量导入(最多 200 条)</summary>
+        <form class="mt-3 space-y-3" method="post" action="/jobs/import/batch">
+          <div>
+            <label class="block text-xs text-slate-600">每行一个 URL</label>
+            <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[160px]" name="urls_text" placeholder="https://...\nhttps://..."></textarea>
+          </div>
+          <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="strict" value="1" />
+            严格模式: 仅保留新能源/计算机/金融科技/化工相关 + 非校招
+          </label>
+          <button class="px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" type="submit">开始批量导入</button>
+        </form>
+      </details>
+    </div>
+  </details>
 
   <form class="mt-5 bg-white border rounded p-4" method="get" action="/jobs">
     <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -219,5 +290,44 @@
       {% endif %}
     </div>
   </div>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('imp-prefill');
+      const urlInput = document.getElementById('imp-url');
+      const st = document.getElementById('imp-status');
+      const setSt = (m) => { if (st) st.textContent = m || ''; };
+
+      const setVal = (id, v) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (typeof v === 'undefined' || v === null) return;
+        el.value = v;
+      };
+
+      if (!btn || !urlInput) return;
+      btn.addEventListener('click', async () => {
+        const url = (urlInput.value || '').trim();
+        if (!url) { setSt('请输入 URL。'); return; }
+        setSt('正在解析...');
+        try {
+          const resp = await fetch('/api/prefill?url=' + encodeURIComponent(url), { credentials: 'same-origin' });
+          if (!resp.ok) throw new Error('http ' + resp.status);
+          const info = await resp.json();
+          setVal('imp-title', info.title || '');
+          setVal('imp-company', info.company_name || '');
+          setVal('imp-source', info.source_url || url);
+          setVal('imp-excerpt', info.excerpt || '');
+          setVal('imp-salary', info.salary_text || '');
+          if (info.published_at) setVal('imp-published', info.published_at);
+          if (info.city) setVal('imp-city', info.city);
+          setSt('已填充，请检查后点击“导入”。');
+        } catch (e) {
+          setSt('解析失败：请手动填写并导入。');
+          setVal('imp-source', url);
+        }
+      });
+    })();
+  </script>
 {% endblock %}
 

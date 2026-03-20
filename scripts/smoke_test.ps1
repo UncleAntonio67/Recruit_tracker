@@ -65,8 +65,8 @@ try {
     throw "login failed, status=$($loginResp.StatusCode)"
   }
 
-  # Basic pages
-  foreach ($path in @("/jobs", "/companies", "/applications", "/jobs/import", "/admin/sources")) {
+  # Basic pages (import UI is integrated into /jobs now)
+  foreach ($path in @("/jobs", "/jobs?show_import=1", "/companies", "/applications", "/resume", "/admin/sources")) {
     $r = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri ($baseUrl + $path) -Method GET
     if ($r.StatusCode -ne 200) { throw "GET $path failed: $($r.StatusCode)" }
   }
@@ -124,6 +124,14 @@ finally:
   if ($jobsFiltered.Content -notmatch "Smoke Engineer") {
     throw "job not found under Shanghai date filter (expected Smoke Engineer)"
   }
+
+  # Job detail should render (regression test for templates)
+  $m = [regex]::Match($jobsFiltered.Content, "/jobs/([0-9a-f\\-]{36})")
+  if (-not $m.Success) { throw "could not find job detail link in /jobs html" }
+  $jobId = $m.Groups[1].Value
+  $jobDetail = Invoke-WebRequest -UseBasicParsing -WebSession $sess -Uri ($baseUrl + "/jobs/" + $jobId) -Method GET
+  if ($jobDetail.StatusCode -ne 200) { throw "GET /jobs/{id} failed: $($jobDetail.StatusCode)" }
+  if ($jobDetail.Content -notmatch "Smoke Engineer") { throw "job detail missing title" }
 
   # Create an application (ASCII-only payload to avoid terminal encoding pitfalls)
   $title = "smoke-test-" + ([Guid]::NewGuid().ToString("N").Substring(0, 8))

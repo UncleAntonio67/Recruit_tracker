@@ -8,6 +8,35 @@
     </div>
   </div>
 
+  {% if user and user.is_admin %}
+    <details class="mt-4" {% if show_import %}open{% endif %}>
+      <summary class="cursor-pointer text-sm text-slate-700">导入企业清单(管理员)</summary>
+      <div class="mt-3 bg-white border rounded-2xl p-4 shadow-sm">
+        <form class="space-y-3" method="post" action="/admin/companies/import" enctype="multipart/form-data">
+          <div>
+            <label class="block text-xs text-slate-600">文件(.txt 或 .xlsx)</label>
+            <input class="mt-1 w-full" type="file" name="file" accept=".txt,.xlsx" required />
+            <div class="text-xs text-slate-500 mt-1">导入后会补全企业与网申入口，并可自动生成 Official:* 采集源。</div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-600">Proxy(可选)</label>
+              <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="proxy" placeholder="http://127.0.0.1:7890" />
+            </div>
+            <div class="flex items-end">
+              <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="seed_sources" value="1" checked />
+                同步生成 Official:* 采集源
+              </label>
+            </div>
+          </div>
+          <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">导入</button>
+          <a class="ml-2 text-sm underline text-slate-600 hover:text-slate-900" href="/admin/sources">去采集页查看上次采集时间</a>
+        </form>
+      </div>
+    </details>
+  {% endif %}
+
   <form class="mt-5 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white border rounded p-4" method="get" action="/companies">
     <div class="md:col-span-2">
       <label class="block text-xs text-slate-600">关键词</label>

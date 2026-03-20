@@ -19,11 +19,10 @@
               <a class="hover:text-sky-700" href="/applications">投递</a>
               <a class="hover:text-sky-700" href="/resume">简历</a>
               <a class="hover:text-sky-700" href="/applications/new">新建投递</a>
-              <a class="hover:text-sky-700" href="/jobs/import">导入</a>
+              <a class="hover:text-sky-700" href="/jobs?show_import=1#import">导入</a>
               {% if user.is_admin %}
                 <a class="hover:text-sky-700" href="/admin/users">用户</a>
                 <a class="hover:text-sky-700" href="/admin/sources">采集</a>
-                <a class="hover:text-sky-700" href="/admin/companies/import">导入企业</a>
               {% endif %}
             </nav>
           {% endif %}

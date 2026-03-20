@@ -119,6 +119,7 @@ def jobs_list(
     applied: str | None = Query(default=None),  # "" | "applied" | "not_applied"
     sort: str | None = Query(default="published_desc"),
     page: int = Query(default=1, ge=1, le=5000),
+    show_import: str | None = Query(default=None),
 ) -> HTMLResponse:
     page_size = 50
 
@@ -314,6 +315,7 @@ def jobs_list(
             "request": request,
             "user": user,
             "items": items,
+            "show_import": bool((show_import or "").strip()),
             "filters": {
                 "q": q or "",
                 "city": city or "",
@@ -363,21 +365,11 @@ def import_page(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> HTMLResponse:
-    prefill = {}
+    # UI is integrated into /jobs. Keep this route for backward compatibility.
+    # If a URL is provided, keep it in query so user can paste and prefill in the integrated panel.
     if url and str(url).strip():
-        try:
-            prefill = prefill_from_url(str(url).strip())
-        except Exception:
-            prefill = {"source_url": str(url).strip()}
-    return templates.TemplateResponse(
-        "import_job.html",
-        {
-            "request": request,
-            "user": user,
-            "prefill": prefill,
-            "city_options": _city_options(db),
-        },
-    )
+        return RedirectResponse(url=f"/jobs?show_import=1#import", status_code=302)
+    return RedirectResponse(url="/jobs?show_import=1#import", status_code=302)
 
 
 @router.post("/import")

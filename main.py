@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.bootstrap import ensure_bootstrap_admin
-from app.routes import admin, applications, auth, jobs, companies, api
+from app.routes import admin, applications, auth, jobs, companies, api, resume
 from app.scheduler import start_crawl_scheduler
 
 app = FastAPI(title="Recruit Tracker", version="0.1.0")
@@ -63,3 +63,4 @@ app.include_router(companies.router)
 app.include_router(applications.router)
 app.include_router(api.router)
 app.include_router(admin.router)
+app.include_router(resume.router)

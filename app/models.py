@@ -165,5 +165,34 @@ class ApplicationEvent(Base):
     application: Mapped[Application] = relationship()
 
 
+class ResumeProfile(Base):
+    __tablename__ = "resume_profiles"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True, default=_uuid)
+    owner_user_id: Mapped[str] = mapped_column(
+        Text,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    full_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    city: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skills: Mapped[str | None] = mapped_column(Text, nullable=True)
+    experience: Mapped[str | None] = mapped_column(Text, nullable=True)
+    projects: Mapped[str | None] = mapped_column(Text, nullable=True)
+    education: Mapped[str | None] = mapped_column(Text, nullable=True)
+    links: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    owner: Mapped[User | None] = relationship(foreign_keys=[owner_user_id])
+
 
 

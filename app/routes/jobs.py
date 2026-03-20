@@ -143,8 +143,9 @@ def jobs_list(
     since_days: int = Query(default=180, ge=1, le=3650),
     published_from: str | None = Query(default=None),
     published_to: str | None = Query(default=None),
-    salary_min_k: int | None = Query(default=None, ge=0, le=1000),
-    salary_max_k: int | None = Query(default=None, ge=0, le=1000),
+    # Keep these as strings because browsers submit empty inputs as "" (which would 422 for int Query params).
+    salary_min_k: str | None = Query(default=None),
+    salary_max_k: str | None = Query(default=None),
     salary_only: int | None = Query(default=None),
     applied: str | None = Query(default=None),  # "" | "applied" | "not_applied"
     page: int = Query(default=1, ge=1, le=5000),
@@ -224,19 +225,36 @@ def jobs_list(
         elif v == "not_applied":
             conds.append(~has_app)
 
+    def _parse_int_field(v: str | None, *, lo: int, hi: int) -> int | None:
+        s = (v or "").strip()
+        if not s:
+            return None
+        try:
+            n = int(s)
+        except Exception:
+            return None
+        if n < lo:
+            return lo
+        if n > hi:
+            return hi
+        return n
+
+    salary_min_k_n = _parse_int_field(salary_min_k, lo=0, hi=1000)
+    salary_max_k_n = _parse_int_field(salary_max_k, lo=0, hi=1000)
+
     # Salary filtering (k RMB/month). Many sources won't have salaries, so these are optional filters.
     if salary_only:
         conds.append(or_(JobPosting.salary_min_k.is_not(None), JobPosting.salary_max_k.is_not(None), JobPosting.salary_text.is_not(None)))
-    if salary_min_k is not None:
-        v = int(salary_min_k)
+    if salary_min_k_n is not None:
+        v = int(salary_min_k_n)
         conds.append(
             or_(
                 and_(JobPosting.salary_min_k.is_not(None), JobPosting.salary_min_k >= v),
                 and_(JobPosting.salary_max_k.is_not(None), JobPosting.salary_max_k >= v),
             )
         )
-    if salary_max_k is not None:
-        v = int(salary_max_k)
+    if salary_max_k_n is not None:
+        v = int(salary_max_k_n)
         conds.append(
             or_(
                 and_(JobPosting.salary_min_k.is_not(None), JobPosting.salary_min_k <= v),
@@ -287,8 +305,8 @@ def jobs_list(
                 "since_days": str(since_days or ""),
                 "published_from": published_from or "",
                 "published_to": published_to or "",
-                "salary_min_k": "" if salary_min_k is None else str(salary_min_k),
-                "salary_max_k": "" if salary_max_k is None else str(salary_max_k),
+                "salary_min_k": (salary_min_k or "").strip(),
+                "salary_max_k": (salary_max_k or "").strip(),
                 "salary_only": "1" if salary_only else "",
                 "applied": applied or "",
             },

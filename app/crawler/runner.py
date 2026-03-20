@@ -1,8 +1,8 @@
 ﻿from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.crawler.connectors import greenhouse, html_list, iguopin, jd, lever, rss, tencent, kuaishou, url_list, m_zhiye, hotjob
@@ -365,6 +365,12 @@ def run(db: Session, since_days: int = 180, only_enabled: bool = True, mode: str
         stats["per_source"].append(res)
 
     stats["mode"] = mode_s
+    # Data volume control: keep only recent + relevant jobs visible.
+    # We do not delete by default; we mark as archived so it can be reversed.
+    try:
+        stats["cleanup"] = cleanup_jobs(db, keep_days=since_days)
+    except Exception as e:
+        stats["cleanup"] = {"error": str(e)[:200]}
     return stats
 
 
@@ -391,6 +397,110 @@ def run_one(db: Session, *, source_id: str, since_days: int = 180) -> dict:
         "since_days": since_days,
         "ran_at": datetime.now(UTC).isoformat(),
     }
+
+
+def _is_relevant_text(text: str) -> bool:
+    s = (text or "").lower()
+    if not s:
+        return False
+
+    # Keep these aligned with _passes_filters() above.
+    hard_tech_any = [
+        "开发",
+        "工程师",
+        "软件",
+        "系统",
+        "平台",
+        "后端",
+        "前端",
+        "全栈",
+        "架构",
+        "数据",
+        "大数据",
+        "算法",
+        "测试",
+        "运维",
+        "devops",
+        "sre",
+        "云",
+        "中台",
+        "安全",
+        "金融科技",
+        "银行",
+        "支付",
+        "风控",
+        "核心系统",
+        "项目管理",
+        "项目经理",
+        "交付",
+        "实施",
+        "架构管理",
+        "企业架构",
+    ]
+    energy_any = [
+        "新能源",
+        "储能",
+        "锂电",
+        "电池",
+        "电芯",
+        "bms",
+        "电化学",
+        "材料",
+        "化工",
+        "pack",
+        "正极",
+        "负极",
+        "电解液",
+        "隔膜",
+    ]
+    soft_any = ["研发", "研究"]
+
+    hard_hit = any(k.lower() in s for k in hard_tech_any)
+    energy_hit = any(k.lower() in s for k in energy_any)
+    soft_hit = any(k.lower() in s for k in soft_any)
+    return bool(hard_hit or energy_hit or (soft_hit and energy_hit))
+
+
+def cleanup_jobs(db: Session, *, keep_days: int = 180) -> dict:
+    """Archive old/irrelevant jobs to keep dataset bounded for internal usage."""
+
+    keep_days = max(1, int(keep_days))
+    cutoff = utcnow() - timedelta(days=keep_days)
+
+    # 1) Archive old jobs (published_at / last_seen_at).
+    old = db.execute(
+        select(JobPosting).where(
+            JobPosting.status == "active",
+            func.coalesce(JobPosting.published_at, JobPosting.last_seen_at) < cutoff,
+        )
+    ).scalars().all()
+    for j in old:
+        j.status = "archived"
+        db.add(j)
+    db.commit()
+
+    # 2) Archive obviously irrelevant jobs even if recent (best-effort).
+    # Conservative: only archive when there's zero relevant signal.
+    recent_active = db.execute(
+        select(JobPosting).where(
+            JobPosting.status == "active",
+            func.coalesce(JobPosting.published_at, JobPosting.last_seen_at) >= cutoff,
+        )
+    ).scalars().all()
+
+    archived_irrelevant = 0
+    for j in recent_active:
+        t = f"{j.title} {j.excerpt or ''} {' '.join(j.tags or [])}"
+        if _is_relevant_text(t):
+            continue
+        j.status = "archived"
+        db.add(j)
+        archived_irrelevant += 1
+
+    if archived_irrelevant:
+        db.commit()
+
+    return {"archived_old": len(old), "archived_irrelevant": archived_irrelevant, "kept_days": keep_days}
 
 
 

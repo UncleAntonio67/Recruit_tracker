@@ -12,6 +12,7 @@ from app.crawler.utils import find_salary_text, parse_dt, parse_salary_k
 from app.crawler.prefill import prefill_from_url
 from app.db import get_db
 from app.models import Application, Company, JobPosting, JobSource, User
+from app.ui_options import city_filter_options
 from app.views import templates
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -90,40 +91,8 @@ def _company_query_tokens(text: str) -> list[str]:
 
 
 def _city_options(db: Session) -> list[str]:
-    city_rows = db.execute(
-        select(JobPosting.city, func.count(JobPosting.id))
-        .where(JobPosting.city.is_not(None))
-        .group_by(JobPosting.city)
-        .order_by(func.count(JobPosting.id).desc())
-        .limit(300)
-    ).all()
-    counts: dict[str, int] = {}
-    for raw_city, n in city_rows:
-        if not raw_city:
-            continue
-        s = str(raw_city).strip()
-        if not s:
-            continue
-        for part in s.replace(",", "/").replace("\uff0c", "/").split("/"):
-            c = part.strip()
-            if not c or len(c) > 20:
-                continue
-            counts[c] = counts.get(c, 0) + int(n or 1)
-
-    preferred = ["北京", "上海", "广州", "深圳", "全国", "远程"]
-    common = ["杭州", "南京", "苏州", "武汉", "成都", "西安", "天津", "重庆", "厦门", "长沙", "合肥"]
-
-    others = sorted([c for c in counts.keys() if c not in preferred], key=lambda x: (-counts.get(x, 0), x))
-    out: list[str] = []
-    seen = set()
-    for c in preferred + common + others:
-        if not c or c in seen:
-            continue
-        seen.add(c)
-        out.append(c)
-        if len(out) >= 60:
-            break
-    return out
+    # Intentionally fixed list (avoid noisy district-level options like "北京市东城区").
+    return city_filter_options()
 
 
 @router.get("", response_class=HTMLResponse)
@@ -148,19 +117,47 @@ def jobs_list(
     salary_max_k: str | None = Query(default=None),
     salary_only: int | None = Query(default=None),
     applied: str | None = Query(default=None),  # "" | "applied" | "not_applied"
+    sort: str | None = Query(default="published_desc"),
     page: int = Query(default=1, ge=1, le=5000),
 ) -> HTMLResponse:
-    page_size = 200
+    page_size = 50
 
-    fetch_cap = 2000
-    fetch_limit = min(fetch_cap, max(page_size, page * page_size) + 1)
+    # For list rows, show one representative source kind/type without extra queries per row.
+    source_kind_1 = (
+        select(JobSource.source_kind)
+        .where(JobSource.job_posting_id == JobPosting.id)
+        .order_by(JobSource.fetched_at.desc().nullslast())
+        .limit(1)
+        .scalar_subquery()
+    )
+    source_type_1 = (
+        select(JobSource.source_type)
+        .where(JobSource.job_posting_id == JobPosting.id)
+        .order_by(JobSource.fetched_at.desc().nullslast())
+        .limit(1)
+        .scalar_subquery()
+    )
+    has_applied_1 = (
+        exists(
+            select(1).where(
+                and_(
+                    Application.owner_user_id == user.id,
+                    Application.job_posting_id == JobPosting.id,
+                )
+            )
+        )
+    ).label("has_applied")
 
-    stmt = (
-        select(JobPosting, Company)
+    base = (
+        select(
+            JobPosting,
+            Company,
+            source_kind_1.label("source_kind_1"),
+            source_type_1.label("source_type_1"),
+            has_applied_1,
+        )
         .outerjoin(Company, Company.id == JobPosting.company_id)
         .where(JobPosting.status == "active")
-        .order_by(func.coalesce(JobPosting.published_at, JobPosting.last_seen_at).desc())
-        .limit(fetch_limit)
     )
 
     conds = []
@@ -263,17 +260,42 @@ def jobs_list(
         )
 
     if conds:
-        stmt = stmt.where(and_(*conds))
+        base = base.where(and_(*conds))
+
+    # Total count + pages
+    count_stmt = select(func.count()).select_from(base.with_only_columns(JobPosting.id).subquery())
+    total = int(db.execute(count_stmt).scalar_one() or 0)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(int(page), total_pages))
+
+    # Sorting
+    sort_s = (sort or "").strip().lower() or "published_desc"
+    if sort_s == "published_asc":
+        order = [
+            JobPosting.published_at.asc().nullslast(),
+            JobPosting.last_seen_at.asc(),
+        ]
+    elif sort_s == "updated_desc":
+        order = [JobPosting.last_seen_at.desc()]
+    else:
+        sort_s = "published_desc"
+        order = [
+            JobPosting.published_at.desc().nullslast(),
+            JobPosting.last_seen_at.desc(),
+        ]
+
+    stmt = base.order_by(*order).offset((page - 1) * page_size).limit(page_size + 1)
 
     rows = db.execute(stmt).all()
-    items = [{"job": job, "company": comp} for job, comp in rows]
-
-    start = (page - 1) * page_size
-    page_items = items[start : start + page_size]
-    has_next = len(items) > (start + page_size)
+    page_rows = rows[:page_size]
+    has_next = len(rows) > page_size
     has_prev = page > 1
     prev_url = str(request.url.include_query_params(page=page - 1)) if has_prev else ""
     next_url = str(request.url.include_query_params(page=page + 1)) if has_next else ""
+
+    items = []
+    for job, comp, sk1, st1, has_applied in page_rows:
+        items.append({"job": job, "company": comp, "source_kind": sk1, "source_type": st1, "has_applied": bool(has_applied)})
 
     industries = [r[0] for r in db.execute(select(Company.industry).where(Company.industry.is_not(None)).distinct()).all()]
     industries = sorted([x for x in industries if x])
@@ -291,7 +313,7 @@ def jobs_list(
         {
             "request": request,
             "user": user,
-            "items": page_items,
+            "items": items,
             "filters": {
                 "q": q or "",
                 "city": city or "",
@@ -309,6 +331,7 @@ def jobs_list(
                 "salary_max_k": (salary_max_k or "").strip(),
                 "salary_only": "1" if salary_only else "",
                 "applied": applied or "",
+                "sort": sort_s,
             },
             "options": {
                 "industries": industries,
@@ -317,10 +340,14 @@ def jobs_list(
                 "source_types": source_types,
                 "source_kinds": source_kinds,
                 "cities": _city_options(db),
-                "since_days": [7, 30, 90, 180, 365, 730],
+                "since_days": [30, 90, 180],
                 "applied": [("not_applied", "未投递/未创建记录"), ("applied", "已创建投递记录")],
+                "sort": [("published_desc", "发布时间(新到旧)"), ("published_asc", "发布时间(旧到新)"), ("updated_desc", "最近更新(新到旧)")],
             },
             "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
             "has_next": has_next,
             "has_prev": has_prev,
             "prev_url": prev_url,
@@ -431,6 +458,8 @@ def _is_relevant_import(title: str, excerpt: str | None) -> bool:
         "前端",
         "全栈",
         "架构",
+        "架构师",
+        "技术管理",
         "数据",
         "大数据",
         "算法",
@@ -446,6 +475,10 @@ def _is_relevant_import(title: str, excerpt: str | None) -> bool:
         "支付",
         "风控",
         "核心系统",
+        "项目",
+        "项目管理",
+        "项目经理",
+        "pmo",
         "新能源",
         "储能",
         "锂电",

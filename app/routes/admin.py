@@ -107,6 +107,100 @@ def sources_new_page(
     )
 
 
+def _infer_official_source(company_name: str, entry_url: str, *, proxy: str | None) -> tuple[str, dict]:
+    """Infer a CrawlSource kind+config from an official entrypoint URL."""
+
+    from urllib.parse import urlparse
+
+    u = entry_url.strip()
+    p = urlparse(u)
+    host = (p.netloc or "").strip().lower()
+
+    kind = "html_list"
+    cfg: dict = {
+        "list_url": u,
+        "company_name": company_name.strip(),
+        "url_contains": ["job", "jobs", "career", "careers", "recruit", "zhaopin", "hr", "join"],
+        "url_excludes": ["campus", "intern", "xiaozhao", "校园", "校招", "实习"],
+        "max_items": 200,
+        "source_type": "official",
+    }
+
+    # Beisen Zhiye portal: use structured API connector.
+    if host.endswith(".m.zhiye.com"):
+        kind = "m_zhiye"
+        cfg = {"base_url": f"{p.scheme}://{p.netloc}", "company_name": company_name.strip(), "jc": 1, "page_size": 30, "max_pages": 40, "source_type": "official"}
+    elif host.endswith(".zhiye.com"):
+        sub = host[: -len(".zhiye.com")]
+        if sub:
+            kind = "m_zhiye"
+            cfg = {
+                "base_url": f"{p.scheme}://{sub}.m.zhiye.com",
+                "company_name": company_name.strip(),
+                "jc": 1,
+                "page_size": 30,
+                "max_pages": 40,
+                "source_type": "official",
+            }
+    elif host.endswith(".hotjob.cn") or host == "hotjob.cn":
+        kind = "hotjob"
+        base = f"{p.scheme or 'https'}://{p.netloc}" if p.netloc else u
+        cfg = {
+            "base_url": base.replace("http://", "https://"),
+            "company_name": company_name.strip(),
+            "recruit_type": 2,  # 社招
+            "page_size": 12,
+            "max_pages": 12,
+            "source_type": "official",
+        }
+    elif u.lower().endswith((".rss", ".xml")):
+        kind = "rss"
+        cfg = {"feed_url": u, "company_name": company_name.strip(), "source_type": "official"}
+
+    if proxy and proxy.strip():
+        cfg["proxy"] = proxy.strip()
+    return kind, cfg
+
+
+@router.post("/sources/new_simple")
+def sources_new_simple_post(
+    request: Request,
+    company_name: str = Form(...),
+    entry_url: str = Form(...),
+    name: str | None = Form(default=None),
+    proxy: str | None = Form(default=None),
+    enabled: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> RedirectResponse:
+    cn = company_name.strip()
+    eu = entry_url.strip()
+    if not cn or not eu:
+        return RedirectResponse(url="/admin/sources/new", status_code=302)
+
+    src_name = (name or "").strip() or f"Official:{cn}"
+    exists = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
+    if exists:
+        kinds = ["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "hotjob", "greenhouse", "lever", "rss", "html_list", "url_list"]
+        return templates.TemplateResponse(
+            "admin_source_new.html",
+            {
+                "request": request,
+                "user": admin,
+                "kinds": kinds,
+                "error": "名称已存在(简单模式)。请改名或在公司页点击“生成/更新采集源”。",
+                "simple": {"company_name": cn, "entry_url": eu, "name": src_name, "proxy": (proxy or "")},
+            },
+            status_code=400,
+        )
+
+    kind, cfg = _infer_official_source(cn, eu, proxy=proxy)
+    s = CrawlSource(kind=kind, name=src_name, enabled=bool(enabled), config=cfg)
+    db.add(s)
+    db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=302)
+
+
 @router.post("/sources/new")
 def sources_new_post(
     request: Request,

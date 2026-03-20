@@ -2,12 +2,13 @@
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db import get_db
 from app.models import Company, CrawlSource, User
+from app.ui_options import HQ_LOCATION_OPTIONS
 from app.views import templates
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -22,8 +23,11 @@ def companies_list(
     industry: str | None = Query(default=None),
     company_type: str | None = Query(default=None),
     hq: str | None = Query(default=None),
-    has_entry: int | None = Query(default=1),
+    # Keep as string because checkbox forms can submit empty/multiple values; avoid 422.
+    has_entry: str | None = Query(default="1"),
+    page: int = Query(default=1, ge=1, le=5000),
 ) -> HTMLResponse:
+    page_size = 100
     stmt = select(Company).order_by(Company.name.asc())
 
     conds = []
@@ -34,15 +38,34 @@ def companies_list(
     if company_type:
         conds.append(Company.company_type == company_type.strip())
     if hq:
-        conds.append(Company.hq_location.ilike(f"%{hq.strip()}%"))
-    if has_entry:
+        hv = hq.strip()
+        if hv == "其他":
+            # Best-effort: anything that doesn't mention the core cities or 全国/远程.
+            core = ["北京", "上海", "广州", "深圳", "全国", "远程"]
+            conds.append(Company.hq_location.is_not(None))
+            conds.append(Company.hq_location != "")
+            for c in core:
+                conds.append(~Company.hq_location.ilike(f"%{c}%"))
+        else:
+            conds.append(Company.hq_location.ilike(f"%{hv}%"))
+    he = (has_entry or "").strip()
+    if he == "1":
         conds.append(Company.recruitment_url.is_not(None))
         conds.append(Company.recruitment_url != "")
 
     if conds:
         stmt = stmt.where(and_(*conds))
 
-    companies = db.execute(stmt).scalars().all()
+    total = int(db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one() or 0)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(int(page), total_pages))
+
+    rows = db.execute(stmt.offset((page - 1) * page_size).limit(page_size + 1)).scalars().all()
+    companies = rows[:page_size]
+    has_next = len(rows) > page_size
+    has_prev = page > 1
+    prev_url = str(request.url.include_query_params(page=page - 1)) if has_prev else ""
+    next_url = str(request.url.include_query_params(page=page + 1)) if has_next else ""
 
     # For filter dropdowns.
     industries = [r[0] for r in db.execute(select(Company.industry).where(Company.industry.is_not(None)).distinct()).all()]
@@ -61,10 +84,19 @@ def companies_list(
                 "industry": industry or "",
                 "company_type": company_type or "",
                 "hq": hq or "",
-                "has_entry": "1" if has_entry else "",
+                "has_entry": "1" if he == "1" else "",
             },
             "industry_options": industries,
             "company_type_options": types,
+            "hq_options": HQ_LOCATION_OPTIONS,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+            "prev_url": prev_url,
+            "next_url": next_url,
         },
     )
 
@@ -86,6 +118,7 @@ def company_detail(
             "request": request,
             "user": user,
             "company": c,
+            "hq_options": HQ_LOCATION_OPTIONS,
         },
     )
 
@@ -98,6 +131,7 @@ def company_update(
     company_type: str | None = Form(default=None),
     industry: str | None = Form(default=None),
     hq_location: str | None = Form(default=None),
+    hq_location_other: str | None = Form(default=None),
     focus_directions: str | None = Form(default=None),
     website: str | None = Form(default=None),
     recruitment_url: str | None = Form(default=None),
@@ -111,7 +145,8 @@ def company_update(
     c.name = name.strip()
     c.company_type = company_type.strip() if company_type and company_type.strip() else None
     c.industry = industry.strip() if industry and industry.strip() else None
-    c.hq_location = hq_location.strip() if hq_location and hq_location.strip() else None
+    picked_hq = (hq_location_other or "").strip() or (hq_location or "").strip() or ""
+    c.hq_location = picked_hq if picked_hq else None
     c.focus_directions = focus_directions.strip() if focus_directions and focus_directions.strip() else None
     c.website = website.strip() if website and website.strip() else None
     c.recruitment_url = recruitment_url.strip() if recruitment_url and recruitment_url.strip() else None

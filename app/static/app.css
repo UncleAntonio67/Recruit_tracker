@@ -1,8 +1,17 @@
-﻿/* Intentionally minimal. Tailwind provides most styling. */
+/* Intentionally minimal. Tailwind provides most styling. */
 html { scroll-behavior: smooth; }
 
 pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Make forms feel consistent (light blue focus like BOSS). */
+input:focus, select:focus, textarea:focus, button:focus {
+  outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #38bdf8; /* sky-400 */
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
 }
 
 /* Make <details><summary> look like a clickable control. */
@@ -19,3 +28,4 @@ details[open] summary::after { content: "▴"; }
 
 /* Slightly nicer underline defaults for links. */
 a { text-underline-offset: 3px; }
+

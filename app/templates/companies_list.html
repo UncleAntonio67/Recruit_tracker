@@ -4,6 +4,7 @@
     <div>
       <h1 class="text-xl font-semibold">企业与网申入口</h1>
       <p class="text-sm text-slate-600 mt-1">只收录官方招聘网址/网申入口，便于合规查找与投递。</p>
+      <p class="text-sm text-slate-600 mt-1">共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。</p>
     </div>
   </div>
 
@@ -14,7 +15,12 @@
     </div>
     <div>
       <label class="block text-xs text-slate-600">总部/核心研发地</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="hq" value="{{ filters.hq }}" placeholder="北京/上海/深圳/全国" />
+      <select class="mt-1 w-full px-3 py-2 border rounded" name="hq">
+        <option value="">全部</option>
+        {% for it in hq_options %}
+          <option value="{{ it }}" {% if filters.hq == it %}selected{% endif %}>{{ it }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div>
       <label class="block text-xs text-slate-600">行业板块</label>
@@ -36,13 +42,14 @@
     </div>
     <div class="flex items-end">
       <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+        <input type="hidden" name="has_entry" value="0" />
         <input type="checkbox" name="has_entry" value="1" {% if filters.has_entry %}checked{% endif %} />
         仅显示有网申入口
       </label>
     </div>
     <div class="md:col-span-6 flex gap-2">
-      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
-      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/companies">清空</a>
+      <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">筛选</button>
+      <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/companies">清空</a>
     </div>
   </form>
 
@@ -89,5 +96,21 @@
     {% if companies|length == 0 %}
       <div class="px-4 py-8 text-sm text-slate-600">暂无公司入口数据。</div>
     {% endif %}
+  </div>
+
+  <div class="mt-4 flex items-center justify-between">
+    <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ prev_url }}">上一页</a>
+      {% else %}
+        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
+      {% endif %}
+      {% if has_next %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ next_url }}">下一页</a>
+      {% else %}
+        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
+      {% endif %}
+    </div>
   </div>
 {% endblock %}

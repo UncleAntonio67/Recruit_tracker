@@ -3,55 +3,62 @@
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
       <h1 class="text-xl font-semibold">{{ company.name }}</h1>
-      <p class="text-sm text-slate-600 mt-1">维护企业信息与官方招聘网址/网申入口。入口补齐后可以一键生成对应采集源。</p>
+      <p class="text-sm text-slate-600 mt-1">维护企业信息与官方招聘网址/网申入口。入口补齐后可一键生成对应采集源。</p>
     </div>
-    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/companies">返回列表</a>
+    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/companies">返回列表</a>
   </div>
 
-  <form class="mt-5 bg-white border rounded p-4 space-y-3 max-w-3xl" method="post" action="/companies/{{ company.id }}">
+  <form class="mt-5 bg-white border rounded-2xl p-4 space-y-3 max-w-3xl shadow-sm" method="post" action="/companies/{{ company.id }}">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div class="md:col-span-2">
         <label class="block text-xs text-slate-600">企业/机构名称</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="name" value="{{ company.name }}" required />
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="name" value="{{ company.name }}" required />
       </div>
       <div>
         <label class="block text-xs text-slate-600">机构类型</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="company_type" value="{{ company.company_type or '' }}" placeholder="央企/国企/银行/大厂/研究所..." />
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="company_type" value="{{ company.company_type or '' }}" placeholder="央企/国企/银行/大厂/研究所..." />
       </div>
       <div>
         <label class="block text-xs text-slate-600">行业板块</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="industry" value="{{ company.industry or '' }}" placeholder="能源与电力/电池与新能源/银行与金融科技/科技与软件..." />
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="industry" value="{{ company.industry or '' }}" placeholder="能源与电力/电池与新能源/银行与金融科技/科技与软件..." />
       </div>
       <div>
         <label class="block text-xs text-slate-600">总部/核心研发地</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="hq_location" value="{{ company.hq_location or '' }}" placeholder="北京/上海/深圳/全国" />
+        <select class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="hq_location">
+          <option value="">不填</option>
+          {% for it in hq_options %}
+            <option value="{{ it }}" {% if (company.hq_location or '') == it %}selected{% endif %}>{{ it }}</option>
+          {% endfor %}
+        </select>
+        <input class="mt-2 w-full px-3 py-2 border rounded-lg bg-white" name="hq_location_other" placeholder="其他(可选, 手动输入)" value="{{ '' if (company.hq_location or '') in hq_options else (company.hq_location or '') }}" />
       </div>
       <div>
         <label class="block text-xs text-slate-600">官网</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="website" value="{{ company.website or '' }}" placeholder="https://..." />
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="website" value="{{ company.website or '' }}" placeholder="https://..." />
       </div>
       <div class="md:col-span-2">
         <label class="block text-xs text-slate-600">重点招聘方向(技术研发类)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="focus_directions" value="{{ company.focus_directions or '' }}" placeholder="后端/数据/架构/电池研发/BMS/项目管理..." />
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="focus_directions" value="{{ company.focus_directions or '' }}" placeholder="后端/数据/架构/电池研发/BMS/项目管理..." />
       </div>
       <div class="md:col-span-2">
         <label class="block text-xs text-slate-600">官方招聘网址/网申入口</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" name="recruitment_url" value="{{ company.recruitment_url or '' }}" placeholder="https://... (尽量填官方入口)" />
-        <p class="text-xs text-slate-500 mt-1">系统不保存网页全文快照，仅保存岗位结构化字段、短摘要和原文链接。</p>
+        <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="recruitment_url" value="{{ company.recruitment_url or '' }}" placeholder="尽量填官方入口(不建议第三方聚合页)" />
+        <p class="text-xs text-slate-500 mt-1">系统不保存网页全文快照, 仅保存岗位结构化字段、短摘要和原文链接。</p>
       </div>
     </div>
 
     <div class="flex gap-2 flex-wrap">
-      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">保存</button>
+      <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">保存</button>
       {% if company.recruitment_url %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ company.recruitment_url }}" target="_blank" rel="noopener noreferrer">打开网申入口</a>
+        <a class="px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" href="{{ company.recruitment_url }}" target="_blank" rel="noopener noreferrer">打开网申入口</a>
       {% endif %}
     </div>
   </form>
 
   {% if company.recruitment_url %}
     <form class="mt-3 max-w-3xl" action="/companies/{{ company.id }}/seed_source" method="post">
-      <button class="px-3 py-2 rounded border bg-white hover:bg-slate-50" type="submit">生成/更新采集源并跳转到采集页</button>
+      <button class="px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" type="submit">生成/更新采集源并跳转到采集页</button>
     </form>
   {% endif %}
 {% endblock %}
+

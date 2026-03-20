@@ -4,6 +4,7 @@
     <div>
       <h1 class="text-xl font-semibold">投递</h1>
       <p class="text-sm text-slate-600 mt-1">只显示你自己的记录。</p>
+      <p class="text-sm text-slate-600 mt-1">共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。</p>
     </div>
     <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications/new">新建投递</a>
   </div>
@@ -58,8 +59,8 @@
       <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_to" value="{{ filters.applied_to }}" />
     </div>
     <div class="flex items-end gap-2">
-      <button class="px-3 py-2 rounded bg-slate-900 text-white hover:bg-slate-800" type="submit">筛选</button>
-      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications">清空</a>
+      <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">筛选</button>
+      <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/applications">清空</a>
     </div>
   </form>
 
@@ -77,12 +78,16 @@
           <div class="col-span-4 font-medium">
             {{ a.title_text }}
             {% if a.applied_at %}
-              <div class="text-xs text-slate-500 mt-1">投递: {{ a.applied_at | fmt_dt("%Y-%m-%d") }}</div>
+              <div class="text-xs text-slate-500 mt-1">投递: {{ a.applied_at | fmt_dt("%Y-%m-%d %H:%M") }}</div>
             {% endif %}
           </div>
           <div class="col-span-3 text-slate-700">{{ a.company_text or "-" }}</div>
           <div class="col-span-2 text-slate-700">{{ a.city_text or "-" }}</div>
-          <div class="col-span-2 text-slate-700">{{ stage_labels.get(a.stage, a.stage) }}</div>
+          <div class="col-span-2 text-slate-700">
+            <span class="inline-flex items-center px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-100 text-xs">
+              {{ stage_labels.get(a.stage, a.stage) }}
+            </span>
+          </div>
           <div class="col-span-1 text-slate-700">{{ a.priority }}</div>
         </div>
       </a>
@@ -90,5 +95,21 @@
     {% if apps|length == 0 %}
       <div class="px-4 py-8 text-sm text-slate-600">暂无投递记录。去岗位详情页“创建投递记录”，或手动新建。</div>
     {% endif %}
+  </div>
+
+  <div class="mt-4 flex items-center justify-between">
+    <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
+    <div class="flex gap-2">
+      {% if has_prev %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ prev_url }}">上一页</a>
+      {% else %}
+        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
+      {% endif %}
+      {% if has_next %}
+        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ next_url }}">下一页</a>
+      {% else %}
+        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
+      {% endif %}
+    </div>
   </div>
 {% endblock %}

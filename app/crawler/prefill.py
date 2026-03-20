@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 
 from app.crawler.http import get_text
 from app.crawler.utils import clamp_excerpt, find_salary_text, parse_dt
+from app.ui_options import CORE_CITIES
 
 
 def _proxy_from_env() -> str | None:
@@ -61,6 +63,99 @@ def _guess_published_date(html: str) -> str | None:
     return dt.date().isoformat()
 
 
+def _normalize_city_core(value: str | None) -> str | None:
+    if not value:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    for c in CORE_CITIES:
+        if c in s:
+            return c
+    return None
+
+
+def _extract_jsonld_jobposting(html: str) -> dict:
+    """Extract JobPosting fields from JSON-LD when available.
+
+    This improves prefill accuracy for many official career sites.
+    """
+
+    out: dict = {}
+    if not html:
+        return out
+
+    # Match <script type="application/ld+json"> ... </script>
+    for m in re.finditer(r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", html, flags=re.IGNORECASE | re.DOTALL):
+        raw = (m.group(1) or "").strip()
+        if not raw or len(raw) > 2_000_000:
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+
+        # Normalize to a list of candidate objects.
+        candidates = []
+        if isinstance(data, dict):
+            candidates = [data]
+            if isinstance(data.get("@graph"), list):
+                candidates += [x for x in data.get("@graph") if isinstance(x, dict)]
+        elif isinstance(data, list):
+            candidates = [x for x in data if isinstance(x, dict)]
+
+        def is_jobposting(obj: dict) -> bool:
+            t = obj.get("@type")
+            if isinstance(t, str) and t.lower() == "jobposting":
+                return True
+            if isinstance(t, list) and any(isinstance(x, str) and x.lower() == "jobposting" for x in t):
+                return True
+            return False
+
+        for obj in candidates:
+            if not is_jobposting(obj):
+                continue
+            title = obj.get("title") or obj.get("name")
+            if title and isinstance(title, str):
+                out["title"] = title.strip()[:120]
+
+            org = obj.get("hiringOrganization") or obj.get("organization") or {}
+            if isinstance(org, dict):
+                cn = org.get("name")
+                if cn and isinstance(cn, str):
+                    out["company_name"] = cn.strip()[:80]
+
+            date_posted = obj.get("datePosted") or obj.get("dateCreated")
+            if date_posted and isinstance(date_posted, str):
+                dt = parse_dt(date_posted.strip())
+                if dt:
+                    out["published_at"] = dt.date().isoformat()
+
+            # Location: support both list/dict.
+            loc = obj.get("jobLocation")
+            locs = []
+            if isinstance(loc, dict):
+                locs = [loc]
+            elif isinstance(loc, list):
+                locs = [x for x in loc if isinstance(x, dict)]
+            for L in locs:
+                addr = L.get("address") or {}
+                if isinstance(addr, dict):
+                    city = addr.get("addressLocality") or addr.get("addressRegion") or addr.get("streetAddress")
+                    if city and isinstance(city, str):
+                        out["city"] = city.strip()[:30]
+                        break
+            if "city" in out:
+                break
+
+            desc = obj.get("description")
+            if desc and isinstance(desc, str):
+                out["excerpt"] = clamp_excerpt(desc)
+            break
+
+    return out
+
+
 def prefill_from_url(url: str, *, proxy: str | None = None) -> dict:
     """Best-effort URL prefill.
 
@@ -76,19 +171,23 @@ def prefill_from_url(url: str, *, proxy: str | None = None) -> dict:
     effective_proxy = proxy or _proxy_from_env()
     html = get_text(u, proxy=effective_proxy, timeout=30)
 
+    jl = _extract_jsonld_jobposting(html)
+
     og_title = _meta_content(html, key="property", value="og:title")
     og_desc = _meta_content(html, key="property", value="og:description")
     desc = _meta_content(html, key="name", value="description")
-    title = og_title or _html_title(html) or ""
+    title = (jl.get("title") or og_title or _html_title(html) or "").strip()
 
-    city = _guess_city(html)
-    published_at = _guess_published_date(html)
+    city = jl.get("city") or _guess_city(html)
+    city = _normalize_city_core(city) or city
 
-    excerpt = clamp_excerpt(og_desc or desc)
+    published_at = jl.get("published_at") or _guess_published_date(html)
+
+    excerpt = jl.get("excerpt") or clamp_excerpt(og_desc or desc)
     salary_text = find_salary_text(html)
 
     # Rough company guess: split by separators in <title>.
-    company_name = None
+    company_name = jl.get("company_name") or None
     t = title
     for sep in [" - ", " | ", "-", "|", "_"]:
         if sep not in t:
@@ -108,4 +207,3 @@ def prefill_from_url(url: str, *, proxy: str | None = None) -> dict:
         "excerpt": excerpt,
         "salary_text": salary_text,
     }
-

@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -14,36 +14,9 @@ from app.views import templates
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
-CITY_OPTIONS = [
-    "北京",
-    "上海",
-    "广州",
-    "深圳",
-    "杭州",
-    "南京",
-    "苏州",
-    "武汉",
-    "成都",
-    "西安",
-    "天津",
-    "重庆",
-    "厦门",
-    "长沙",
-    "合肥",
-    "青岛",
-    "济南",
-    "郑州",
-    "大连",
-    "沈阳",
-    "宁波",
-    "无锡",
-    "福州",
-    "珠海",
-    "东莞",
-    "佛山",
-    "全国",
-    "远程",
-]
+from app.ui_options import city_filter_options
+
+CITY_OPTIONS = city_filter_options()
 
 STAGE_LABELS = {
     # legacy english -> cn
@@ -141,15 +114,17 @@ def applications_list(
     stage: str | None = Query(default=None),
     city: str | None = Query(default=None),
     channel: str | None = Query(default=None),
-    priority: int | None = Query(default=None, ge=1, le=5),
+    # Keep as string because <select> submits empty value as "" which would 422 for int Query params.
+    priority: str | None = Query(default=None),
     applied_from: str | None = Query(default=None),
     applied_to: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1, le=5000),
 ) -> HTMLResponse:
+    page_size = 50
     stmt = (
         select(Application)
         .where(Application.owner_user_id == user.id)
         .order_by(Application.updated_at.desc())
-        .limit(200)
     )
     conds = []
     if q:
@@ -173,7 +148,14 @@ def applications_list(
     if channel:
         conds.append(Application.channel == channel.strip())
     if priority is not None:
-        conds.append(Application.priority == int(priority))
+        pv = str(priority).strip()
+        if pv:
+            try:
+                n = int(pv)
+            except Exception:
+                n = None
+            if n is not None and 1 <= n <= 5:
+                conds.append(Application.priority == n)
 
     af = _parse_dt_local(applied_from) if applied_from else None
     at = _parse_dt_local(applied_to) if applied_to else None
@@ -188,7 +170,17 @@ def applications_list(
     if conds:
         stmt = stmt.where(and_(*conds))
 
-    apps = db.execute(stmt).scalars().all()
+    total = int(db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one() or 0)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page_v = max(1, min(int(page), total_pages))
+
+    rows = db.execute(stmt.offset((page_v - 1) * page_size).limit(page_size + 1)).scalars().all()
+    apps = rows[:page_size]
+    has_next = len(rows) > page_size
+    has_prev = page_v > 1
+    prev_url = str(request.url.include_query_params(page=page_v - 1)) if has_prev else ""
+    next_url = str(request.url.include_query_params(page=page_v + 1)) if has_next else ""
+
     return templates.TemplateResponse(
         "applications_list.html",
         {
@@ -208,6 +200,14 @@ def applications_list(
             "stage_labels": STAGE_LABELS,
             "city_options": CITY_OPTIONS,
             "channels": CHANNEL_OPTIONS,
+            "page": page_v,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+            "prev_url": prev_url,
+            "next_url": next_url,
         },
     )
 

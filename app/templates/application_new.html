@@ -1,69 +1,90 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
-  <h1 class="text-xl font-semibold">新建投递</h1>
-  <p class="text-sm text-slate-600 mt-1">用于无法关联岗位库的投递(例如临时内推、线下机会)。</p>
-
-  <form id="prefill-form" class="mt-5 bg-white border rounded p-4 flex flex-col md:flex-row gap-3 md:items-end max-w-2xl" method="get" action="/applications/new">
-    <div class="flex-1">
-      <label class="block text-xs text-slate-600">给一个岗位链接(可选)，系统尝试自动填充</label>
-      <input id="prefill-url" class="mt-1 w-full px-3 py-2 border rounded" name="url" value="{{ prefill.source_url or '' }}" placeholder="粘贴岗位详情页 URL" />
-      <div id="prefill-status" class="text-xs text-slate-500 mt-1"></div>
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-xl font-semibold">新建投递</h1>
+      <p class="text-sm text-slate-600 mt-1">用于无法关联岗位库的投递(例如临时内推、线下机会)。支持给链接自动填充。</p>
     </div>
-    <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">自动填充</button>
-  </form>
+    <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/applications">返回列表</a>
+  </div>
 
-  <form id="new-app-form" class="mt-5 bg-white border rounded p-4 space-y-3 max-w-2xl" method="post" action="/applications/new">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div>
-        <label class="block text-xs text-slate-600">岗位</label>
-        <input id="f-title" class="mt-1 w-full px-3 py-2 border rounded" name="title_text" value="{{ prefill.title_text }}" required />
-      </div>
-      <div>
-        <label class="block text-xs text-slate-600">公司(可选)</label>
-        <input id="f-company" class="mt-1 w-full px-3 py-2 border rounded" name="company_text" value="{{ prefill.company_text }}" />
-      </div>
-      <div>
-        <label class="block text-xs text-slate-600">城市(可选)</label>
-        <select id="f-city" class="mt-1 w-full px-3 py-2 border rounded" name="city_text">
-          <option value="">不填</option>
-          {% for c in city_options %}
-            <option value="{{ c }}" {% if prefill.city_text == c %}selected{% endif %}>{{ c }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-slate-600">投递类型/渠道(可选)</label>
-        <select class="mt-1 w-full px-3 py-2 border rounded" name="channel_select">
-          <option value="">不填</option>
-          {% for ch in channels %}
-            <option value="{{ ch }}" {% if prefill.channel == ch %}selected{% endif %}>{{ ch }}</option>
-          {% endfor %}
-        </select>
-        <input class="mt-2 w-full px-3 py-2 border rounded" name="channel_other" placeholder="其他(可选, 手动输入)" value="{{ '' if (prefill.channel or '') in channels else (prefill.channel or '') }}" />
-      </div>
-      <div class="md:col-span-2">
-        <label class="block text-xs text-slate-600">原文链接(可选)</label>
-        <input id="f-source" class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ prefill.source_url }}" />
-      </div>
-      <div>
-        <label class="block text-xs text-slate-600">投递时间(可选)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_at" />
-      </div>
-      <div>
-        <label class="block text-xs text-slate-600">阶段</label>
-        <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
-          {% for s in stages %}
-            <option value="{{ s }}" {% if prefill.stage == s %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs text-slate-600">优先级(1高-5低)</label>
-        <input class="mt-1 w-full px-3 py-2 border rounded" type="number" min="1" max="5" name="priority" value="3" />
-      </div>
+  <section class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+    <div class="flex items-baseline justify-between gap-3 flex-wrap">
+      <h2 class="font-semibold text-slate-900">给一个岗位链接，自动填充</h2>
+      <div class="text-xs text-slate-500">最佳效果: 官方岗位详情页(非搜索结果页)</div>
     </div>
-    <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">创建</button>
-  </form>
+
+    <form id="prefill-form" class="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3 items-end" method="get" action="/applications/new">
+      <div class="md:col-span-10">
+        <label class="block text-xs text-slate-600">岗位详情页 URL</label>
+        <input id="prefill-url" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="url" value="{{ prefill.source_url or '' }}" placeholder="粘贴岗位详情页 URL" />
+        <div id="prefill-status" class="text-xs text-slate-500 mt-1"></div>
+      </div>
+      <div class="md:col-span-2 flex gap-2">
+        <button class="w-full px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">自动填充</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-4 max-w-3xl">
+    <h2 class="font-semibold text-slate-900">投递信息</h2>
+    <form id="new-app-form" class="mt-4 space-y-3" method="post" action="/applications/new">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-slate-600">岗位</label>
+          <input id="f-title" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="title_text" value="{{ prefill.title_text }}" required />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">公司(可选)</label>
+          <input id="f-company" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="company_text" value="{{ prefill.company_text }}" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">城市(可选)</label>
+          <select id="f-city" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="city_text">
+            <option value="">不填</option>
+            {% for c in city_options %}
+              <option value="{{ c }}" {% if prefill.city_text == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">投递渠道(可选)</label>
+          <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel_select">
+            <option value="">不填</option>
+            {% for ch in channels %}
+              <option value="{{ ch }}" {% if prefill.channel == ch %}selected{% endif %}>{{ ch }}</option>
+            {% endfor %}
+          </select>
+          <input class="mt-2 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel_other" placeholder="其他(可选)" value="{{ '' if (prefill.channel or '') in channels else (prefill.channel or '') }}" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">原文链接(可选)</label>
+          <input id="f-source" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="source_url" value="{{ prefill.source_url }}" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">投递时间(可选)</label>
+          <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="applied_at" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">阶段</label>
+          <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="stage">
+            {% for s in stages %}
+              <option value="{{ s }}" {% if prefill.stage == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600">优先级(1高-5低)</label>
+          <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="priority">
+            {% for p in ["1","2","3","4","5"] %}
+              <option value="{{ p }}" {% if p == "3" %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium" type="submit">创建投递记录</button>
+    </form>
+  </section>
 
   <script>
     (function () {
@@ -73,7 +94,7 @@
       if (!form || !urlInput || !status) return;
 
       const setStatus = (msg) => { status.textContent = msg || ''; };
-      const val = (id) => document.getElementById(id);
+      const el = (id) => document.getElementById(id);
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -83,23 +104,28 @@
           return;
         }
 
-        setStatus('正在抓取并填充...');
+        setStatus('正在解析链接并自动填充...');
         try {
           const resp = await fetch('/api/prefill?url=' + encodeURIComponent(url), { credentials: 'same-origin' });
           if (!resp.ok) throw new Error('http ' + resp.status);
           const info = await resp.json();
 
-          if (info.title && val('f-title')) val('f-title').value = info.title;
-          if (info.company_name && val('f-company')) val('f-company').value = info.company_name;
-          if (info.city && val('f-city')) val('f-city').value = info.city;
-          if (info.source_url && val('f-source')) val('f-source').value = info.source_url;
+          if (info.title && el('f-title')) el('f-title').value = info.title;
+          if (info.company_name && el('f-company')) el('f-company').value = info.company_name;
+          if (info.city && el('f-city')) el('f-city').value = info.city;
+          if (info.source_url && el('f-source')) el('f-source').value = info.source_url;
 
-          setStatus('已填充。你可以检查并点击“创建”。');
+          const got = [];
+          if (info.title) got.push('岗位');
+          if (info.company_name) got.push('公司');
+          if (info.city) got.push('城市');
+          setStatus(got.length ? ('已填充: ' + got.join(' / ') + '。请检查后点击“创建投递记录”。') : '未识别到字段，请手动填写。');
         } catch (err) {
-          setStatus('自动填充失败，已改用刷新方式。');
+          setStatus('自动填充失败，已退回为刷新方式。');
           form.submit();
         }
       });
     })();
   </script>
 {% endblock %}
+

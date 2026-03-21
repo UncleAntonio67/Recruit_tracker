@@ -1,116 +1,89 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
       <h1 class="text-xl font-semibold">{{ app.title_text }}</h1>
-      <p class="text-sm text-slate-600 mt-1">{{ app.company_text or "未填写公司" }}{% if app.city_text %} · {{ app.city_text }}{% endif %}</p>
+      <p class="text-sm text-slate-600 mt-1">
+        {{ app.company_text or "未填写公司" }}{% if app.city_text %} · {{ app.city_text }}{% endif %}
+        {% if app.channel %} · {{ app.channel }}{% endif %}
+      </p>
+      <div class="mt-2 flex items-center gap-2 flex-wrap">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
+          阶段: {{ stage_labels.get(app.stage, app.stage) }}
+        </span>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-50 text-slate-700 border border-slate-200 text-xs">
+          优先: {{ app.priority }}
+        </span>
+        <span class="text-xs text-slate-500">
+          投递: {{ app.applied_at | fmt_dt("%Y-%m-%d %H:%M") if app.applied_at else "-" }}
+        </span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
       {% if app.source_url %}
-        <a class="text-sm underline text-slate-800 break-all" href="{{ app.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
+        <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+           href="{{ app.source_url }}" target="_blank" rel="noreferrer">
+          打开原文
+        </a>
       {% endif %}
+      <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/applications">返回列表</a>
     </div>
   </div>
 
-  <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="bg-white border rounded p-4">
-      <h2 class="font-semibold">状态与字段</h2>
-      <form class="mt-3 space-y-3" method="post" action="/applications/{{ app.id }}/update">
-        <div>
-          <label class="block text-xs text-slate-600">阶段</label>
-          <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
-            {% for s in stages %}
-              <option value="{{ s }}" {% if stage_labels.get(app.stage, app.stage) == s %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">投递时间(可选)</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_at" value="{{ app.applied_at | fmt_dt_local }}" />
-          {% if app.applied_at %}
-            <div class="text-xs text-slate-500 mt-1">当前记录: {{ app.applied_at | fmt_dt("%Y-%m-%d %H:%M") }}</div>
-          {% endif %}
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">优先级(1高-5低)</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" type="number" min="1" max="5" name="priority" value="{{ app.priority }}" />
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">公司</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" name="company_text" value="{{ app.company_text or '' }}" />
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">城市</label>
-          <select class="mt-1 w-full px-3 py-2 border rounded" name="city_text">
-            <option value="">不填</option>
-            {% for c in city_options %}
-              <option value="{{ c }}" {% if (app.city_text or '') == c %}selected{% endif %}>{{ c }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">原文链接</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" name="source_url" value="{{ app.source_url or '' }}" />
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">投递类型/渠道</label>
-          <select class="mt-1 w-full px-3 py-2 border rounded" name="channel_select">
-            <option value="">不填</option>
-            {% for ch in channels %}
-              <option value="{{ ch }}" {% if (app.channel or '') == ch %}selected{% endif %}>{{ ch }}</option>
-            {% endfor %}
-          </select>
-          <input class="mt-2 w-full px-3 py-2 border rounded" name="channel_other" placeholder="其他(可选, 手动输入)" value="{{ '' if (app.channel or '') in channels else (app.channel or '') }}" />
-        </div>
-        <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">保存</button>
-      </form>
-    </div>
+  <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4">
+    <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+      <div class="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2 class="font-semibold text-slate-900">事件时间线</h2>
+        <div class="text-xs text-slate-500">计划时间与实际发生时间精确到时分</div>
+      </div>
 
-    <div class="md:col-span-2 bg-white border rounded p-4">
-      <h2 class="font-semibold">新增事件</h2>
-      <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3" method="post" action="/applications/{{ app.id }}/events">
-        <div>
-          <label class="block text-xs text-slate-600">类型</label>
-          <select class="mt-1 w-full px-3 py-2 border rounded" name="event_type" required>
-            {% for t in event_types %}
-              <option value="{{ t }}">{{ t }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">计划时间(可选)</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="scheduled_at" />
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">结果(可选)</label>
-          <select class="mt-1 w-full px-3 py-2 border rounded" name="result">
-            <option value="">不填</option>
-            {% for r in event_results %}
-              <option value="{{ r }}">{{ r }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600">实际发生(可选)</label>
-          <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="occurred_at" />
-        </div>
-        <div class="md:col-span-3">
-          <label class="block text-xs text-slate-600">备注(可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[100px]" name="note"></textarea>
-        </div>
-        <div class="md:col-span-3">
-          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">添加</button>
-        </div>
-      </form>
+      <div class="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+        <h3 class="text-sm font-semibold text-slate-900">新增事件</h3>
+        <form class="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3" method="post" action="/applications/{{ app.id }}/events">
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">类型</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="event_type" required>
+              {% for t in event_types %}
+                <option value="{{ t }}">{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">计划时间(可选)</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="scheduled_at" />
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">实际发生(可选)</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="occurred_at" />
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">结果(可选)</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="result">
+              <option value="">不填</option>
+              {% for r in event_results %}
+                <option value="{{ r }}">{{ r }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="md:col-span-12">
+            <label class="block text-xs text-slate-600">备注(可选)</label>
+            <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[90px] text-sm" name="note" placeholder="例如: 面试官、问题点、下轮安排、复盘要点"></textarea>
+          </div>
+          <div class="md:col-span-12 flex gap-2">
+            <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">添加到时间线</button>
+          </div>
+        </form>
+      </div>
 
-      <h2 class="font-semibold mt-6">事件时间线</h2>
-      {% if events|length == 0 %}
-        <p class="mt-3 text-sm text-slate-600">暂无事件记录。</p>
+      {% if not events or events|length == 0 %}
+        <p class="mt-4 text-sm text-slate-600">暂无事件记录。</p>
       {% else %}
-        <div class="mt-4 relative">
+        <div class="mt-6 relative">
           <div class="absolute left-5 top-0 bottom-0 w-px bg-slate-200"></div>
           <div class="space-y-4">
             {% for e in events %}
               {% set main_dt = e.occurred_at or e.scheduled_at or e.created_at %}
-              <div class="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-3">
+              <div class="grid grid-cols-1 md:grid-cols-[170px_1fr] gap-3">
                 <div class="md:text-right text-xs text-slate-500">
                   <div class="font-medium text-slate-700">{{ main_dt | fmt_dt("%Y-%m-%d") }}</div>
                   <div>{{ main_dt | fmt_dt("%H:%M") }}</div>
@@ -127,7 +100,7 @@
                 </div>
                 <div class="relative pl-10">
                   <div class="absolute left-3 top-4 w-5 h-5 rounded-full bg-blue-600 ring-4 ring-white"></div>
-                  <div class="border rounded-xl p-4 bg-white shadow-sm">
+                  <div class="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm">
                     <div class="flex items-start justify-between gap-3 flex-wrap">
                       <div>
                         <div class="text-base font-semibold text-slate-900">{{ e.event_type }}</div>
@@ -137,45 +110,47 @@
                           {% if e.occurred_at %}发生: {{ e.occurred_at | fmt_dt("%Y-%m-%d %H:%M") }}{% endif %}
                         </div>
                       </div>
+
                       <details class="text-sm">
                         <summary class="cursor-pointer text-slate-600 hover:text-slate-900">编辑</summary>
-                        <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3" method="post" action="/applications/{{ app.id }}/events/{{ e.id }}/update">
-                          <div>
+                        <form class="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3" method="post" action="/applications/{{ app.id }}/events/{{ e.id }}/update">
+                          <div class="md:col-span-4">
                             <label class="block text-xs text-slate-600">类型</label>
-                            <select class="mt-1 w-full px-3 py-2 border rounded" name="event_type" required>
+                            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="event_type" required>
                               {% for t in event_types %}
                                 <option value="{{ t }}" {% if e.event_type == t %}selected{% endif %}>{{ t }}</option>
                               {% endfor %}
                             </select>
                           </div>
-                          <div>
+                          <div class="md:col-span-4">
                             <label class="block text-xs text-slate-600">计划时间</label>
-                            <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="scheduled_at" value="{{ e.scheduled_at | fmt_dt_local }}" />
+                            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="scheduled_at" value="{{ e.scheduled_at | fmt_dt_local }}" />
                           </div>
-                          <div>
+                          <div class="md:col-span-4">
                             <label class="block text-xs text-slate-600">实际发生</label>
-                            <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="occurred_at" value="{{ e.occurred_at | fmt_dt_local }}" />
+                            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="occurred_at" value="{{ e.occurred_at | fmt_dt_local }}" />
                           </div>
-                          <div>
+                          <div class="md:col-span-4">
                             <label class="block text-xs text-slate-600">结果</label>
-                            <select class="mt-1 w-full px-3 py-2 border rounded" name="result">
+                            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="result">
                               <option value="">不填</option>
                               {% for r in event_results %}
                                 <option value="{{ r }}" {% if (e.result or '') == r %}selected{% endif %}>{{ r }}</option>
                               {% endfor %}
                             </select>
                           </div>
-                          <div class="md:col-span-3">
+                          <div class="md:col-span-12">
                             <label class="block text-xs text-slate-600">备注</label>
-                            <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[90px]" name="note">{{ e.note or '' }}</textarea>
+                            <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[90px] text-sm" name="note">{{ e.note or '' }}</textarea>
                           </div>
-                          <div class="md:col-span-3 flex gap-2">
-                            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">保存</button>
-                            <button class="px-3 py-2 rounded border bg-white hover:bg-slate-50" type="submit" formmethod="post" formaction="/applications/{{ app.id }}/events/{{ e.id }}/delete">删除</button>
+                          <div class="md:col-span-12 flex gap-2">
+                            <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">保存</button>
+                            <button class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" type="submit" formmethod="post" formaction="/applications/{{ app.id }}/events/{{ e.id }}/delete">删除</button>
                           </div>
                         </form>
                       </details>
                     </div>
+
                     {% if e.note %}
                       <pre class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ e.note }}</pre>
                     {% endif %}
@@ -186,6 +161,72 @@
           </div>
         </div>
       {% endif %}
-    </div>
+    </section>
+
+    <aside class="space-y-4">
+      <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+        <h2 class="font-semibold text-slate-900">状态与字段</h2>
+        <form class="mt-4 space-y-3" method="post" action="/applications/{{ app.id }}/update">
+          <div>
+            <label class="block text-xs text-slate-600">阶段</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="stage">
+              {% for s in stages %}
+                <option value="{{ s }}" {% if stage_labels.get(app.stage, app.stage) == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">投递时间(可选)</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="applied_at" value="{{ app.applied_at | fmt_dt_local }}" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">优先级(1高-5低)</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="priority">
+              {% for p in ["1","2","3","4","5"] %}
+                <option value="{{ p }}" {% if app.priority == (p | int) %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">公司</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="company_text" value="{{ app.company_text or '' }}" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">城市</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="city_text">
+              <option value="">不填</option>
+              {% for c in city_options %}
+                <option value="{{ c }}" {% if (app.city_text or '') == c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">原文链接</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="source_url" value="{{ app.source_url or '' }}" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600">投递渠道</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel_select">
+              <option value="">不填</option>
+              {% for ch in channels %}
+                <option value="{{ ch }}" {% if (app.channel or '') == ch %}selected{% endif %}>{{ ch }}</option>
+              {% endfor %}
+            </select>
+            <input class="mt-2 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel_other" placeholder="其他(可选)" value="{{ '' if (app.channel or '') in channels else (app.channel or '') }}" />
+          </div>
+
+          <button class="w-full px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium" type="submit">保存</button>
+        </form>
+      </section>
+
+      <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+        <h2 class="font-semibold text-slate-900">效率工具</h2>
+        <div class="mt-3 space-y-2 text-sm">
+          <a class="inline-flex items-center justify-center w-full px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/resume">打开简历维护</a>
+          <a class="inline-flex items-center justify-center w-full px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/jobs">回到岗位库</a>
+        </div>
+      </section>
+    </aside>
   </div>
-{% endblock %} 
+{% endblock %}
+

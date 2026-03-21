@@ -1,79 +1,88 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
       <h1 class="text-xl font-semibold">采集源</h1>
       <p class="text-sm text-slate-600 mt-1">
-        配置多个渠道，支持近 180 天采集。
+        配置多个渠道，默认采集近 180 天岗位。
         {% if crawl_interval_hours and crawl_interval_hours > 0 %}
-          自动采集间隔: {{ crawl_interval_hours }} 小时(约 {{ (crawl_interval_hours/24)|round(1) }} 天)。
-          <span class="ml-2">默认模式: {{ crawl_mode }} · 默认范围: 近 {{ crawl_since_days }} 天。</span>
+          自动采集间隔: {{ crawl_interval_hours }} 小时(约 {{ (crawl_interval_hours/24)|round(1) }} 天) · mode={{ crawl_mode }} · since={{ crawl_since_days }} 天。
         {% else %}
           当前未启用自动采集(可通过环境变量 CRAWL_INTERVAL_HOURS 设置)。
         {% endif %}
       </p>
     </div>
-    <div class="flex gap-2">
+    <div class="flex gap-2 flex-wrap">
       <form action="/admin/crawl/run" method="post" class="flex gap-2 items-center">
-        <select class="text-sm px-3 py-2 rounded border bg-white" name="mode">
-          <option value="official" selected>官方(定时推荐)</option>
-          <option value="core">核心(更快)</option>
-          <option value="all">全量(慢)</option>
+        <select class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white" name="mode">
+          <option value="official" selected>official(推荐)</option>
+          <option value="core">core(更快)</option>
+          <option value="all">all(更慢)</option>
         </select>
-        <select class="text-sm px-3 py-2 rounded border bg-white" name="since_days">
+        <select class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white" name="since_days">
           {% for d in [30, 90, 180, 365] %}
-            <option value="{{ d }}" {% if d == 180 %}selected{% endif %}>近 {{ d }} 天</option>
+            <option value="{{ d }}" {% if d == 180 %}selected{% endif %}>{{ d }} days</option>
           {% endfor %}
         </select>
-        <button class="text-sm px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">立即采集</button>
+        <button class="text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">立即采集</button>
       </form>
-      <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/admin/sources/new">新增采集源</a>
+      <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/admin/sources/new">新增采集源</a>
     </div>
   </div>
 
-  <div class="mt-5 bg-white border rounded overflow-hidden">
-    <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">
-      <div class="col-span-2">启用</div>
-      <div class="col-span-2">类型</div>
-      <div class="col-span-4">名称</div>
-      <div class="col-span-2">最近状态</div>
-      <div class="col-span-2">操作</div>
+  <section class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b border-slate-200 bg-slate-50">
+      <div class="col-span-2">enabled</div>
+      <div class="col-span-2">kind</div>
+      <div class="col-span-5">name</div>
+      <div class="col-span-2">last run</div>
+      <div class="col-span-1">ops</div>
     </div>
+
     {% for it in items %}
       {% set s = it.source %}
-      <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b items-center">
-        <div class="col-span-2 text-sm">{{ "是" if s.enabled else "否" }}</div>
-        <div class="col-span-2 text-sm text-slate-700">{{ s.kind }}</div>
-        <div class="col-span-4">
-          <div class="text-sm font-medium">{{ s.name }}</div>
-          <div class="text-xs text-slate-500">
-            last:
-            {% if s.last_run_at %}{{ s.last_run_at | fmt_dt('%Y-%m-%d %H:%M') }}{% else %}-{% endif %}
-            · {{ s.last_status or "-" }}
+      <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 items-center">
+        <div class="col-span-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded border text-xs {% if s.enabled %}bg-emerald-50 text-emerald-700 border-emerald-100{% else %}bg-slate-50 text-slate-600 border-slate-200{% endif %}">
+            {{ "on" if s.enabled else "off" }}
+          </span>
+        </div>
+        <div class="col-span-2 text-sm text-slate-700 font-mono">{{ s.kind }}</div>
+        <div class="col-span-5 min-w-0">
+          <div class="text-sm font-semibold text-slate-900 truncate">{{ s.name }}</div>
+          <div class="text-xs text-slate-500 mt-1">
+            status:
+            <span class="inline-flex items-center px-2 py-0.5 rounded border {% if s.last_status == 'ok' %}bg-emerald-50 text-emerald-700 border-emerald-100{% elif s.last_status == 'error' %}bg-red-50 text-red-700 border-red-100{% else %}bg-white text-slate-700 border-slate-200{% endif %}">
+              {{ s.last_status or "-" }}
+            </span>
             {% if it.next_run_at %}
-              · next: {{ it.next_run_at | fmt_dt('%Y-%m-%d %H:%M') }}
+              <span class="ml-2">next: {{ it.next_run_at | fmt_dt("%Y-%m-%d %H:%M") }}</span>
             {% endif %}
           </div>
           {% if s.last_error %}
-            <div class="text-xs text-red-700 mt-1 truncate">{{ s.last_error }}</div>
+            <div class="text-xs text-red-700 mt-1 truncate" title="{{ s.last_error }}">{{ s.last_error }}</div>
           {% endif %}
         </div>
-        <div class="col-span-2 text-sm">{{ s.last_status or "-" }}</div>
-        <div class="col-span-2">
+        <div class="col-span-2 text-xs text-slate-600">
+          {% if s.last_run_at %}{{ s.last_run_at | fmt_dt("%Y-%m-%d %H:%M") }}{% else %}-{% endif %}
+        </div>
+        <div class="col-span-1">
           <div class="flex flex-col gap-2">
             <form action="/admin/sources/{{ s.id }}/run" method="post">
               <input type="hidden" name="since_days" value="180" />
-              <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 w-full" type="submit">采集此源</button>
+              <button class="w-full text-xs px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">run</button>
             </form>
             <form action="/admin/sources/{{ s.id }}/toggle" method="post">
-              <button class="text-sm px-3 py-1 rounded border bg-white hover:bg-slate-50 w-full" type="submit">切换启用</button>
+              <button class="w-full text-xs px-2 py-1.5 rounded border border-slate-200 bg-white hover:bg-slate-50" type="submit">toggle</button>
             </form>
           </div>
         </div>
       </div>
     {% endfor %}
+
     {% if items|length == 0 %}
-      <div class="px-4 py-8 text-sm text-slate-600">暂无采集源。先新增一个采集源，再点“立即采集”。</div>
+      <div class="px-4 py-10 text-sm text-slate-600">暂无采集源。建议从企业详情页补齐网申入口后“一键生成采集源”。</div>
     {% endif %}
-  </div>
+  </section>
 {% endblock %}
+

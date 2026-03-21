@@ -1,115 +1,218 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
-      <h1 class="text-xl font-semibold">投递</h1>
-      <p class="text-sm text-slate-600 mt-1">只显示你自己的记录。</p>
-      <p class="text-sm text-slate-600 mt-1">共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。</p>
+      <h1 class="text-xl font-semibold">投递管理</h1>
+      <p class="text-sm text-slate-600 mt-1">只显示你自己的记录。共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。</p>
     </div>
-    <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications/new">新建投递</a>
+    <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/applications/new">新建投递</a>
   </div>
 
-  <form class="mt-5 grid grid-cols-1 md:grid-cols-12 gap-3 bg-white border rounded p-4" method="get" action="/applications">
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">关键词</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
-    </div>
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">阶段</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="stage">
-        <option value="">全部</option>
-        {% for s in stages %}
-          <option value="{{ s }}" {% if filters.stage == s %}selected{% endif %}>{{ s }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">城市</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="city">
-        <option value="">全部</option>
-        {% for c in city_options %}
-          <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">渠道</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="channel">
-        <option value="">全部</option>
-        {% for ch in channels %}
-          <option value="{{ ch }}" {% if filters.channel == ch %}selected{% endif %}>{{ ch }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">优先级</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="priority">
-        <option value="">全部</option>
-        {% for p in ["1","2","3","4","5"] %}
-          <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">投递时间从</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_from" value="{{ filters.applied_from }}" />
-    </div>
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">到</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_to" value="{{ filters.applied_to }}" />
-    </div>
-    <div class="flex items-end gap-2">
-      <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">筛选</button>
-      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications">清空</a>
-    </div>
-  </form>
+  <section class="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+    <form class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" method="get" action="/applications">
+      <div class="md:col-span-3">
+        <label class="block text-xs text-slate-600">关键词</label>
+        <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="q" value="{{ filters.q }}" placeholder="岗位/公司" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">阶段</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="stage">
+          <option value="">全部</option>
+          {% for s in stages %}
+            <option value="{{ s }}" {% if filters.stage == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">城市</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="city">
+          <option value="">全部</option>
+          {% for c in city_options %}
+            <option value="{{ c }}" {% if filters.city == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">渠道</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel">
+          <option value="">全部</option>
+          {% for ch in channels %}
+            <option value="{{ ch }}" {% if filters.channel == ch %}selected{% endif %}>{{ ch }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-1">
+        <label class="block text-xs text-slate-600">优先</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="priority">
+          <option value="">全部</option>
+          {% for p in ["1","2","3","4","5"] %}
+            <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">投递时间从</label>
+        <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="applied_from" value="{{ filters.applied_from }}" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">到</label>
+        <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="datetime-local" name="applied_to" value="{{ filters.applied_to }}" />
+      </div>
 
-  <div class="mt-5 bg-white border rounded overflow-hidden">
-    <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">
-      <div class="col-span-4">岗位</div>
-      <div class="col-span-3">公司</div>
-      <div class="col-span-2">城市</div>
-      <div class="col-span-2">阶段</div>
-      <div class="col-span-1">优先</div>
-    </div>
-    {% for a in apps %}
-      <a class="block hover:bg-slate-50" href="/applications/{{ a.id }}">
-        <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b">
-          <div class="col-span-4 font-medium">
-            {{ a.title_text }}
-            {% if a.applied_at %}
-              <div class="text-xs text-slate-500 mt-1">投递: {{ a.applied_at | fmt_dt("%Y-%m-%d %H:%M") }}</div>
+      <input type="hidden" name="selected" value="{{ filters.selected }}" />
+
+      <div class="md:col-span-12 flex gap-2">
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">筛选</button>
+        <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="/applications">清空</a>
+      </div>
+    </form>
+  </section>
+
+  <div class="mt-5 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-4">
+    <section class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div class="text-sm font-semibold text-slate-900">投递列表</div>
+        <div class="text-xs text-slate-500">点击右侧预览(桌面端)</div>
+      </div>
+
+      {% if apps|length == 0 %}
+        <div class="px-4 py-10 text-sm text-slate-600">暂无投递记录。建议从岗位详情页“一键创建投递”，或手动新建。</div>
+      {% else %}
+        <div class="divide-y divide-slate-100">
+          {% for a in apps %}
+            {% set is_sel = (selected_app and selected_app.id == a.id) %}
+            <div class="px-4 py-3 {% if is_sel %}bg-blue-50/60{% else %}hover:bg-slate-50{% endif %} transition-colors">
+              <div class="flex items-start justify-between gap-3">
+                <a class="block min-w-0" href="{{ request.url.include_query_params(selected=a.id) }}">
+                  <div class="text-sm font-semibold text-slate-900 truncate">{{ a.title_text }}</div>
+                  <div class="mt-1 text-xs text-slate-600 truncate">
+                    {{ a.company_text or "-" }}
+                    {% if a.city_text %} · {{ a.city_text }}{% endif %}
+                    {% if a.channel %} · {{ a.channel }}{% endif %}
+                  </div>
+                  <div class="mt-2 flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded border text-xs {% if stage_labels.get(a.stage, a.stage) in ['Offer','已入职'] %}bg-emerald-50 text-emerald-700 border-emerald-100{% elif stage_labels.get(a.stage, a.stage) in ['拒绝','放弃'] %}bg-slate-100 text-slate-600 border-slate-200{% else %}bg-blue-50 text-blue-700 border-blue-100{% endif %}">
+                      {{ stage_labels.get(a.stage, a.stage) }}
+                    </span>
+                    <span class="text-xs text-slate-500">优先: {{ a.priority }}</span>
+                    {% if a.applied_at %}
+                      <span class="text-xs text-slate-500">投递: {{ a.applied_at | fmt_dt("%m-%d %H:%M") }}</span>
+                    {% endif %}
+                  </div>
+                </a>
+                <div class="flex flex-col gap-2 flex-none">
+                  <a class="text-xs px-2.5 py-1.5 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-center" href="/applications/{{ a.id }}">详情</a>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between">
+        <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
+        <div class="flex gap-2">
+          {% if has_prev %}
+            <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="{{ prev_url }}">上一页</a>
+          {% else %}
+            <span class="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 text-sm">上一页</span>
+          {% endif %}
+          {% if has_next %}
+            <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="{{ next_url }}">下一页</a>
+          {% else %}
+            <span class="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 text-sm">下一页</span>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200 bg-white flex items-start justify-between gap-4 flex-wrap">
+        {% if selected_app %}
+          <div class="min-w-[260px]">
+            <div class="text-xs text-slate-500">投递详情预览</div>
+            <div class="mt-1 text-lg font-semibold text-slate-900">{{ selected_app.title_text }}</div>
+            <div class="mt-1 text-sm text-slate-600">
+              {{ selected_app.company_text or "未填写公司" }}
+              {% if selected_app.city_text %} · {{ selected_app.city_text }}{% endif %}
+            </div>
+            {% if selected_app.source_url %}
+              <a class="mt-2 inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+                 href="{{ selected_app.source_url }}" target="_blank" rel="noreferrer">
+                打开原文
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 3h7v7"></path>
+                  <path d="M10 14L21 3"></path>
+                  <path d="M21 14v7H3V3h7"></path>
+                </svg>
+              </a>
             {% endif %}
           </div>
-          <div class="col-span-3 text-slate-700">{{ a.company_text or "-" }}</div>
-          <div class="col-span-2 text-slate-700">{{ a.city_text or "-" }}</div>
-          <div class="col-span-2 text-slate-700">
-            <span class="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 text-xs">
-              {{ stage_labels.get(a.stage, a.stage) }}
-            </span>
+          <div class="flex items-center gap-2">
+            <a class="text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" href="/applications/{{ selected_app.id }}">进入详情页</a>
           </div>
-          <div class="col-span-1 text-slate-700">{{ a.priority }}</div>
-        </div>
-      </a>
-    {% endfor %}
-    {% if apps|length == 0 %}
-      <div class="px-4 py-8 text-sm text-slate-600">暂无投递记录。去岗位详情页“创建投递记录”，或手动新建。</div>
-    {% endif %}
-  </div>
+        {% else %}
+          <div>
+            <div class="text-sm font-semibold text-slate-900">时间线</div>
+            <div class="text-sm text-slate-600 mt-1">选择左侧一条投递记录，在这里预览事件时间线。</div>
+          </div>
+        {% endif %}
+      </div>
 
-  <div class="mt-4 flex items-center justify-between">
-    <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
-    <div class="flex gap-2">
-      {% if has_prev %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ prev_url }}">上一页</a>
-      {% else %}
-        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
+      {% if selected_app %}
+        <div class="p-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div class="text-xs text-slate-500">阶段</div>
+              <div class="mt-1 text-sm font-semibold text-slate-900">{{ stage_labels.get(selected_app.stage, selected_app.stage) }}</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div class="text-xs text-slate-500">投递时间</div>
+              <div class="mt-1 text-sm font-semibold text-slate-900">{{ selected_app.applied_at | fmt_dt("%Y-%m-%d %H:%M") if selected_app.applied_at else "-" }}</div>
+            </div>
+          </div>
+
+          <h2 class="mt-6 font-semibold text-slate-900">事件时间线</h2>
+          {% if not selected_events or selected_events|length == 0 %}
+            <p class="mt-2 text-sm text-slate-600">暂无事件记录。</p>
+          {% else %}
+            <div class="mt-4 relative">
+              <div class="absolute left-4 top-0 bottom-0 w-px bg-slate-200"></div>
+              <div class="space-y-4">
+                {% for e in selected_events %}
+                  {% set main_dt = e.occurred_at or e.scheduled_at or e.created_at %}
+                  <div class="relative pl-10">
+                    <div class="absolute left-2 top-4 w-5 h-5 rounded-full bg-blue-600 ring-4 ring-white"></div>
+                    <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
+                      <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                          <div class="text-base font-semibold text-slate-900">{{ e.event_type }}</div>
+                          <div class="mt-1 text-xs text-slate-500">
+                            {{ main_dt | fmt_dt("%Y-%m-%d %H:%M") }}
+                            {% if e.result %} · 结果: {{ e.result }}{% endif %}
+                          </div>
+                        </div>
+                        <div class="text-xs">
+                          {% if e.occurred_at %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">发生</span>
+                          {% elif e.scheduled_at %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100">计划</span>
+                          {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">记录</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                      {% if e.note %}
+                        <pre class="mt-3 whitespace-pre-wrap text-sm text-slate-700">{{ e.note }}</pre>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
       {% endif %}
-      {% if has_next %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ next_url }}">下一页</a>
-      {% else %}
-        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
-      {% endif %}
-    </div>
+    </section>
   </div>
 {% endblock %}

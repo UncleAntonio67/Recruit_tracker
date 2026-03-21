@@ -118,6 +118,7 @@ def applications_list(
     priority: str | None = Query(default=None),
     applied_from: str | None = Query(default=None),
     applied_to: str | None = Query(default=None),
+    selected: str | None = Query(default=None),
     page: int = Query(default=1, ge=1, le=5000),
 ) -> HTMLResponse:
     page_size = 50
@@ -181,12 +182,43 @@ def applications_list(
     prev_url = str(request.url.include_query_params(page=page_v - 1)) if has_prev else ""
     next_url = str(request.url.include_query_params(page=page_v + 1)) if has_next else ""
 
+    selected_app = None
+    selected_events = []
+    selected_id = (selected or "").strip()
+    if selected_id:
+        try:
+            cand = db.get(Application, selected_id)
+        except Exception:
+            cand = None
+        if cand and cand.owner_user_id == user.id:
+            # Opportunistic migration of legacy stage values to Chinese display values.
+            if cand.stage in STAGE_LABELS:
+                cand.stage = STAGE_LABELS[cand.stage]
+                db.add(cand)
+                db.commit()
+            selected_app = cand
+            selected_events = (
+                db.execute(
+                    select(ApplicationEvent)
+                    .where(ApplicationEvent.application_id == cand.id)
+                    .order_by(
+                        ApplicationEvent.occurred_at.asc().nullslast(),
+                        ApplicationEvent.scheduled_at.asc().nullslast(),
+                        ApplicationEvent.created_at.asc(),
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
     return templates.TemplateResponse(
         "applications_list.html",
         {
             "request": request,
             "user": user,
             "apps": apps,
+            "selected_app": selected_app,
+            "selected_events": selected_events,
             "filters": {
                 "q": q or "",
                 "stage": stage or "",
@@ -195,11 +227,14 @@ def applications_list(
                 "priority": "" if priority is None else str(priority),
                 "applied_from": applied_from or "",
                 "applied_to": applied_to or "",
+                "selected": selected_id,
             },
             "stages": STAGES,
             "stage_labels": STAGE_LABELS,
             "city_options": CITY_OPTIONS,
             "channels": CHANNEL_OPTIONS,
+            "event_types": EVENT_TYPES,
+            "event_results": EVENT_RESULTS,
             "page": page_v,
             "page_size": page_size,
             "total": total,

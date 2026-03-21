@@ -3,112 +3,123 @@
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
       <h1 class="text-xl font-semibold">简历维护</h1>
-      <p class="text-sm text-slate-600 mt-1">把常用信息集中维护, 投递时快速复制粘贴。</p>
+      <p class="text-sm text-slate-600 mt-1">把常用信息集中维护，投递时快速复制粘贴，提高效率。</p>
     </div>
   </div>
 
   <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="lg:col-span-2 bg-white border rounded-2xl p-4 shadow-sm">
-      <h2 class="font-semibold text-slate-900">我的信息</h2>
+    <section class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+      <div class="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2 class="font-semibold text-slate-900">我的信息</h2>
+        <div class="text-xs text-slate-500">只存结构化字段，不存任何第三方页面快照</div>
+      </div>
+
       <form class="mt-4 space-y-3" method="post" action="/resume">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-slate-600">姓名</label>
-            <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="full_name" value="{{ profile.full_name or '' }}" />
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="full_name" value="{{ profile.full_name or '' }}" />
           </div>
           <div>
             <label class="block text-xs text-slate-600">城市</label>
-            <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="city" value="{{ profile.city or '' }}" placeholder="北京/上海/广州/深圳" />
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="city">
+              <option value="">不填</option>
+              {% for c in ["北京","上海","广州","深圳"] %}
+                <option value="{{ c }}" {% if (profile.city or '') == c %}selected{% endif %}>{{ c }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div>
             <label class="block text-xs text-slate-600">电话</label>
-            <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="phone" value="{{ profile.phone or '' }}" />
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="phone" value="{{ profile.phone or '' }}" />
           </div>
           <div>
             <label class="block text-xs text-slate-600">邮箱</label>
-            <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="email" value="{{ profile.email or '' }}" />
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="email" value="{{ profile.email or '' }}" />
           </div>
         </div>
 
         <div>
           <label class="block text-xs text-slate-600">个人简介(可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[90px]" name="summary">{{ profile.summary or '' }}</textarea>
+          <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[90px] text-sm" name="summary">{{ profile.summary or '' }}</textarea>
         </div>
         <div>
           <label class="block text-xs text-slate-600">技能栈(可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[90px]" name="skills">{{ profile.skills or '' }}</textarea>
+          <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[90px] text-sm" name="skills">{{ profile.skills or '' }}</textarea>
         </div>
         <div>
           <label class="block text-xs text-slate-600">工作经历要点(可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[120px]" name="experience">{{ profile.experience or '' }}</textarea>
+          <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[120px] text-sm" name="experience">{{ profile.experience or '' }}</textarea>
         </div>
         <div>
           <label class="block text-xs text-slate-600">项目经历要点(可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[120px]" name="projects">{{ profile.projects or '' }}</textarea>
+          <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[120px] text-sm" name="projects">{{ profile.projects or '' }}</textarea>
         </div>
         <div>
           <label class="block text-xs text-slate-600">教育经历(可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[90px]" name="education">{{ profile.education or '' }}</textarea>
+          <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[90px] text-sm" name="education">{{ profile.education or '' }}</textarea>
         </div>
         <div>
           <label class="block text-xs text-slate-600">Links(JSON 可选)</label>
-          <textarea class="mt-1 w-full px-3 py-2 border rounded-lg bg-white min-h-[90px]" name="links_json">{{ profile.links | tojson(indent=2) }}</textarea>
+          <textarea class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white min-h-[90px] text-sm" name="links_json">{{ profile.links | tojson(indent=2) }}</textarea>
           <div class="text-xs text-slate-500 mt-1">例如: { "github": "https://...", "blog": "https://...", "linkedin": "..." }</div>
         </div>
 
-        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">保存</button>
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium" type="submit">保存</button>
       </form>
-    </div>
+    </section>
 
-    <div class="bg-white border rounded-2xl p-4 shadow-sm">
-      <h2 class="font-semibold text-slate-900">快速复制</h2>
-      <p class="text-xs text-slate-500 mt-1">点击复制, 直接粘贴到网申表单。</p>
+    <aside class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+      <div class="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2 class="font-semibold text-slate-900">快速复制</h2>
+        <div class="text-xs text-slate-500">点击复制后直接粘贴到网申表单</div>
+      </div>
 
       <div class="mt-4 space-y-3">
-        <div class="p-3 rounded-xl border bg-slate-50">
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">姓名</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.full_name or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.full_name or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.full_name or '-' }}</div>
         </div>
 
-        <div class="p-3 rounded-xl border bg-slate-50">
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">电话</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.phone or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.phone or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.phone or '-' }}</div>
         </div>
 
-        <div class="p-3 rounded-xl border bg-slate-50">
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">邮箱</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.email or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.email or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.email or '-' }}</div>
         </div>
 
-        <div class="p-3 rounded-xl border bg-slate-50">
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">城市</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.city or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.city or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.city or '-' }}</div>
         </div>
 
-        <details class="p-3 rounded-xl border bg-white">
+        <details class="p-3 rounded-xl border border-slate-200 bg-white">
           <summary class="cursor-pointer text-sm text-slate-700">复制大段文本</summary>
           <div class="mt-3 space-y-2">
             <button class="w-full text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="button" data-copy="{{ (profile.summary or '') }}">复制个人简介</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.skills or '') }}">复制技能栈</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.experience or '') }}">复制工作经历要点</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.projects or '') }}">复制项目经历要点</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.education or '') }}">复制教育经历</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.skills or '') }}">复制技能栈</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.experience or '') }}">复制工作经历要点</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.projects or '') }}">复制项目经历要点</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.education or '') }}">复制教育经历</button>
           </div>
         </details>
       </div>
-    </div>
+    </aside>
   </div>
 
   <script>
@@ -118,7 +129,6 @@
         try {
           await navigator.clipboard.writeText(txt || '');
         } catch (e) {
-          // Fallback for older browsers.
           const ta = document.createElement('textarea');
           ta.value = txt || '';
           ta.style.position = 'fixed';
@@ -133,3 +143,4 @@
     })();
   </script>
 {% endblock %}
+

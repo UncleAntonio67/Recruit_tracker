@@ -2,8 +2,8 @@
 {% block content %}
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
-      <h1 class="text-lg font-bold text-slate-800">岗位</h1>
-      <p class="text-sm text-slate-500 mt-1">共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条</p>
+      <h1 class="text-xl font-semibold">找工作</h1>
+      <p class="text-sm text-slate-600 mt-1">共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。</p>
     </div>
     <div class="flex gap-2">
       <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/jobs?show_import=1#import">导入岗位</a>
@@ -12,7 +12,7 @@
 
   <details id="import" class="mt-4" {% if show_import %}open{% endif %}>
     <summary class="cursor-pointer text-sm text-slate-700">导入岗位(仅保存结构化字段 + 短摘要 + 原文链接)</summary>
-    <div class="mt-3 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    <div class="mt-3 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="md:col-span-2">
           <label class="block text-xs font-medium text-slate-500">岗位详情页 URL</label>
@@ -46,7 +46,7 @@
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-500">薪资(可选)</label>
-            <input id="imp-salary" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="salary_text" placeholder="例如 20-35k·14薪" />
+            <input id="imp-salary" class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="salary_text" placeholder="例如 20-35k 或 30k-50k*14" />
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-500">发布时间(可选)</label>
@@ -64,7 +64,7 @@
         <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm shadow-sm" type="submit">导入</button>
       </form>
 
-      <details class="mt-4">
+      <details class="mt-5">
         <summary class="cursor-pointer text-sm text-slate-700">批量导入(最多 200 条)</summary>
         <form class="mt-3 space-y-3" method="post" action="/jobs/import/batch">
           <div>
@@ -81,8 +81,11 @@
     </div>
   </details>
 
-  <section class="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-    <div class="flex flex-col gap-4">
+  <section class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <form id="filters-form" method="get" action="/jobs" class="space-y-4">
+      <input type="hidden" name="show_import" value="{{ '1' if show_import else '' }}" />
+      <input type="hidden" name="page" value="1" />
+
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
           <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
@@ -95,244 +98,224 @@
           class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg bg-slate-50 placeholder-slate-400 focus:bg-white transition-colors sm:text-sm"
           placeholder="搜索岗位名称、公司或摘要..."
           name="q"
-          form="filters-form"
           value="{{ filters.q }}"
         />
       </div>
 
-      <form id="filters-form" method="get" action="/jobs">
-        <input type="hidden" name="show_import" value="{{ '1' if show_import else '' }}" />
-        <input type="hidden" name="page" value="1" />
-
-        <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-          <div class="flex items-center gap-3 flex-wrap">
-            <span class="text-sm font-medium text-slate-700">城市:</span>
-            {% set city_now = filters.city or '' %}
-            {% for c in ["全部"] + options.cities %}
-              {% set v = '' if c == "全部" else c %}
-              <a
-                href="{{ request.url.include_query_params(city=v, page=1) }}"
-                class="px-3 py-1 text-sm rounded-md transition-colors {% if city_now == v %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}"
-              >{{ c }}</a>
-            {% endfor %}
-          </div>
-
-          <div class="flex items-center gap-3 flex-wrap">
-            <span class="text-sm font-medium text-slate-700">状态:</span>
-            {% set applied_now = filters.applied or '' %}
-            {% for k, label in [('', '全部'), ('not_applied', '未投递'), ('applied', '已投递')] %}
-              <a
-                href="{{ request.url.include_query_params(applied=k, page=1) }}"
-                class="px-3 py-1 text-sm rounded-md transition-colors {% if applied_now == k %}bg-slate-800 text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}"
-              >{{ label }}</a>
-            {% endfor %}
-          </div>
+      <div class="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-sm font-medium text-slate-700">城市:</span>
+          {% set city_now = filters.city or '' %}
+          {% for c in ["全部"] + options.cities %}
+            {% set v = '' if c == "全部" else c %}
+            <a
+              href="{{ request.url.include_query_params(city=v, page=1) }}"
+              class="px-3 py-1 text-sm rounded-md transition-colors {% if city_now == v %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}"
+            >{{ c }}</a>
+          {% endfor %}
         </div>
 
-        <div class="flex items-center gap-4 pt-3 border-t border-slate-100 flex-wrap">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-700">薪资要求(k/月):</span>
-            <input type="text" inputmode="numeric" name="salary_min_k" placeholder="Min"
-                   class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded bg-white"
-                   value="{{ filters.salary_min_k }}" />
-            <span class="text-slate-400">-</span>
-            <input type="text" inputmode="numeric" name="salary_max_k" placeholder="Max"
-                   class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded bg-white"
-                   value="{{ filters.salary_max_k }}" />
-          </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-sm font-medium text-slate-700">投递:</span>
+          {% set applied_now = filters.applied or '' %}
+          {% for key,label in [('', '全部'), ('not_applied','未投递'), ('applied','已投递')] %}
+            <a
+              href="{{ request.url.include_query_params(applied=key, page=1) }}"
+              class="px-3 py-1 text-sm rounded-md transition-colors {% if applied_now == key %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}"
+            >{{ label }}</a>
+          {% endfor %}
+        </div>
+      </div>
 
-          <div class="hidden sm:block w-px h-5 bg-slate-200 mx-2"></div>
-
-          <button class="flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition-colors" type="button" onclick="document.getElementById('adv').open = !document.getElementById('adv').open;">
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M6 12h12M10 19h4"/></svg>
-            更多高级筛选
-          </button>
-
-          <div class="flex-1"></div>
-          <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm shadow-sm" type="submit">筛选</button>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">薪资下限(k/月)</label>
+          <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="salary_min_k" value="{{ filters.salary_min_k }}" placeholder="例如 20" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">薪资上限(k/月)</label>
+          <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="salary_max_k" value="{{ filters.salary_max_k }}" placeholder="例如 60" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">发布时间从</label>
+          <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="date" name="published_from" value="{{ filters.published_from }}" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">到</label>
+          <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" type="date" name="published_to" value="{{ filters.published_to }}" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">范围</label>
+          <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="since_days">
+            {% for d in options.since_days %}
+              <option value="{{ d }}" {% if filters.since_days == (d|string) %}selected{% endif %}>近 {{ d }} 天</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs text-slate-600">排序</label>
+          <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="sort">
+            {% for k,lab in options.sort %}
+              <option value="{{ k }}" {% if filters.sort == k %}selected{% endif %}>{{ lab }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="md:col-span-12 flex items-center gap-4 flex-wrap">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="salary_only" value="1" {% if filters.salary_only %}checked{% endif %} />
+            仅显示有薪资
+          </label>
+          <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">筛选</button>
           <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="/jobs">清空</a>
         </div>
+      </div>
 
-        <details id="adv" class="mt-4" {% if filters.industry or filters.company_type or filters.seniority or filters.source_kind or filters.source_type or filters.source_name or filters.published_from or filters.published_to or filters.company %}open{% endif %}>
-          <summary class="cursor-pointer text-sm text-slate-700">高级筛选</summary>
-          <div class="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3">
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">公司</label>
-              <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="company" value="{{ filters.company }}" placeholder="模糊匹配" />
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">行业板块</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="industry">
-                <option value="">全部</option>
-                {% for it in options.industries %}
-                  <option value="{{ it }}" {% if filters.industry == it %}selected{% endif %}>{{ it }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">机构类型</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="company_type">
-                <option value="">全部</option>
-                {% for it in options.company_types %}
-                  <option value="{{ it }}" {% if filters.company_type == it %}selected{% endif %}>{{ it }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">年限/级别</label>
-              <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="seniority" value="{{ filters.seniority }}" placeholder="例如 3年/5年以上/专家" />
-            </div>
-
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">Source kind</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="source_kind">
-                <option value="">All</option>
-                {% for it in options.source_kinds %}
-                  <option value="{{ it }}" {% if filters.source_kind == it %}selected{% endif %}>{{ it | fmt_source_kind }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">Source type</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="source_type">
-                <option value="">All</option>
-                {% for it in options.source_types %}
-                  <option value="{{ it }}" {% if filters.source_type == it %}selected{% endif %}>{{ it | fmt_source_type }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="md:col-span-6">
-              <label class="block text-xs font-medium text-slate-500">Source name</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="source_name">
-                <option value="">All</option>
-                {% for it in options.source_names %}
-                  <option value="{{ it }}" {% if filters.source_name == it %}selected{% endif %}>{{ it }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-xs font-medium text-slate-500">近</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="since_days">
-                {% for d in options.since_days %}
-                  <option value="{{ d }}" {% if filters.since_days == (d|string) %}selected{% endif %}>{{ d }} days</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-xs font-medium text-slate-500">排序</label>
-              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" name="sort">
-                {% for v, label in options.sort %}
-                  <option value="{{ v }}" {% if filters.sort == v %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">发布时间从</label>
-              <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" type="date" name="published_from" value="{{ filters.published_from }}" />
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-medium text-slate-500">到</label>
-              <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white text-sm" type="date" name="published_to" value="{{ filters.published_to }}" />
-            </div>
+      <details>
+        <summary class="cursor-pointer text-sm text-slate-700">高级筛选</summary>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">公司(模糊匹配)</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="company" value="{{ filters.company }}" placeholder="例如 国家电网" />
           </div>
-        </details>
-      </form>
-    </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">行业板块</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="industry">
+              <option value="">全部</option>
+              {% for it in options.industries %}
+                <option value="{{ it }}" {% if filters.industry == it %}selected{% endif %}>{{ it }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">机构类型</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="company_type">
+              <option value="">全部</option>
+              {% for it in options.company_types %}
+                <option value="{{ it }}" {% if filters.company_type == it %}selected{% endif %}>{{ it }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-600">年限/级别(模糊)</label>
+            <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="seniority" value="{{ filters.seniority }}" placeholder="例如 3-5年 / 高级 / 架构" />
+          </div>
+          <div class="md:col-span-4">
+            <label class="block text-xs text-slate-600">source_name</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="source_name">
+              <option value="">全部</option>
+              {% for it in options.source_names %}
+                <option value="{{ it }}" {% if filters.source_name == it %}selected{% endif %}>{{ it }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="md:col-span-4">
+            <label class="block text-xs text-slate-600">source_type</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="source_type">
+              <option value="">全部</option>
+              {% for it in options.source_types %}
+                <option value="{{ it }}" {% if filters.source_type == it %}selected{% endif %}>{{ it }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="md:col-span-4">
+            <label class="block text-xs text-slate-600">source_kind</label>
+            <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="source_kind">
+              <option value="">全部</option>
+              {% for it in options.source_kinds %}
+                <option value="{{ it }}" {% if filters.source_kind == it %}selected{% endif %}>{{ it }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </details>
+    </form>
   </section>
 
-  <section class="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-      <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-        <span class="text-blue-600">▦</span>
-        岗位列表 <span class="font-normal text-sm text-slate-500 ml-1">({{ total }} 个结果)</span>
-      </h2>
-      <div class="text-sm text-slate-500">按发布时间排序</div>
-    </div>
-
-    <div class="hidden md:grid grid-cols-12 gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
-      <div class="col-span-4">岗位信息</div>
+  <section class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="hidden md:grid grid-cols-12 gap-2 px-5 py-3 text-xs text-slate-500 border-b border-slate-200 bg-slate-50">
+      <div class="col-span-4">岗位</div>
       <div class="col-span-2">公司</div>
       <div class="col-span-1">城市</div>
       <div class="col-span-2">薪资</div>
-      <div class="col-span-1">日期</div>
+      <div class="col-span-1">发布</div>
       <div class="col-span-2 text-right">操作</div>
     </div>
 
-    <div class="divide-y divide-slate-100">
-      {% for it in items %}
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 px-5 py-4 items-center hover:bg-blue-50/50 transition-colors group">
-          <div class="md:col-span-4 min-w-0">
-            <a class="font-bold text-slate-800 text-sm truncate group-hover:text-blue-600 transition-colors block"
-               href="/jobs/{{ it.job.id }}" title="{{ it.job.title }}">{{ it.job.title }}</a>
-            {% if it.job.tags and it.job.tags|length > 0 %}
-              <div class="flex gap-1 mt-1 truncate">
-                {% for t in it.job.tags[:3] %}
-                  <span class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded">{{ t }}</span>
-                {% endfor %}
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="md:col-span-2 flex items-center gap-1.5 text-sm text-slate-700 min-w-0">
-            <span class="text-slate-400">▣</span>
-            <span class="truncate" title="{{ it.company.name if it.company else '-' }}">{{ it.company.name if it.company else "-" }}</span>
-          </div>
-
-          <div class="md:col-span-1 flex items-center gap-1 text-sm text-slate-500">
-            <span class="text-slate-400">⌁</span>
-            {{ it.job.city or "-" }}
-          </div>
-
-          <div class="md:col-span-2 font-bold text-cyan-600 text-sm">
-            {% if it.job.salary_text %}
-              {{ it.job.salary_text }}
-            {% elif it.job.salary_min_k and it.job.salary_max_k %}
-              {{ it.job.salary_min_k }}-{{ it.job.salary_max_k }}k
-            {% elif it.job.salary_min_k %}
-              {{ it.job.salary_min_k }}k+
-            {% elif it.job.salary_max_k %}
-              {{ it.job.salary_max_k }}k
-            {% else %}
-              <span class="text-slate-400 font-normal">-</span>
-            {% endif %}
-          </div>
-
-          <div class="md:col-span-1 text-xs text-slate-400 font-mono">
-            {% if it.job.published_at %}
-              {{ it.job.published_at | fmt_dt("%m-%d") }}
-            {% else %}
-              --
-            {% endif %}
-          </div>
-
-          <div class="md:col-span-2 flex items-center justify-end gap-3">
-            {% if it.source_url %}
-              <a class="text-slate-400 hover:text-blue-600 transition-colors" title="打开原文"
-                 href="{{ it.source_url }}" target="_blank" rel="noreferrer">
-                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 3h7v7"></path>
-                  <path d="M10 14L21 3"></path>
-                  <path d="M21 14v7H3V3h7"></path>
-                </svg>
-              </a>
-            {% endif %}
-
-            {% if it.has_applied %}
-              <span class="flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded border border-slate-200">
-                ✓ 已投递
-              </span>
-            {% else %}
-              <form method="post" action="/jobs/{{ it.job.id }}/apply">
-                <button class="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded shadow-sm transition-colors" type="submit">
-                  一键投递
-                </button>
-              </form>
-            {% endif %}
+    {% for it in items %}
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 px-5 py-4 items-center hover:bg-blue-50/50 transition-colors group border-b border-slate-100">
+        <div class="md:col-span-4 min-w-0">
+          <a class="font-bold text-slate-800 text-sm truncate group-hover:text-blue-600 transition-colors block"
+             href="/jobs/{{ it.job.id }}" title="{{ it.job.title }}">{{ it.job.title }}</a>
+          <div class="mt-1 text-xs text-slate-500 truncate">
+            {% if it.source_type %}{{ it.source_type | fmt_source_type }}{% endif %}
+            {% if it.source_kind %} · {{ it.source_kind | fmt_source_kind }}{% endif %}
           </div>
         </div>
-      {% endfor %}
-    </div>
+
+        <div class="md:col-span-2 flex items-center gap-1.5 text-sm text-slate-700 min-w-0">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 flex-none" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14"></path>
+            <path d="M9 21V9h6v12"></path>
+          </svg>
+          <span class="truncate" title="{{ it.company.name if it.company else '-' }}">{{ it.company.name if it.company else "-" }}</span>
+        </div>
+
+        <div class="md:col-span-1 flex items-center gap-1 text-sm text-slate-600">
+          <svg viewBox="0 0 24 24" class="w-4 h-4 text-slate-400 flex-none" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10z"></path>
+            <circle cx="12" cy="11" r="2"></circle>
+          </svg>
+          {{ it.job.city or "-" }}
+        </div>
+
+        <div class="md:col-span-2 font-semibold text-cyan-700 text-sm">
+          {% if it.job.salary_text %}
+            {{ it.job.salary_text }}
+          {% elif it.job.salary_min_k and it.job.salary_max_k %}
+            {{ it.job.salary_min_k }}-{{ it.job.salary_max_k }}k
+          {% elif it.job.salary_min_k %}
+            {{ it.job.salary_min_k }}k+
+          {% elif it.job.salary_max_k %}
+            {{ it.job.salary_max_k }}k
+          {% else %}
+            <span class="text-slate-400 font-normal">-</span>
+          {% endif %}
+        </div>
+
+        <div class="md:col-span-1 text-xs text-slate-500 font-mono">
+          {% if it.job.published_at %}
+            {{ it.job.published_at | fmt_dt("%m-%d") }}
+          {% else %}
+            --
+          {% endif %}
+        </div>
+
+        <div class="md:col-span-2 flex items-center justify-end gap-3">
+          {% if it.source_url %}
+            <a class="text-slate-400 hover:text-blue-600 transition-colors" title="打开原文"
+               href="{{ it.source_url }}" target="_blank" rel="noreferrer">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 3h7v7"></path>
+                <path d="M10 14L21 3"></path>
+                <path d="M21 14v7H3V3h7"></path>
+              </svg>
+            </a>
+          {% endif %}
+
+          {% if it.has_applied %}
+            <span class="inline-flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1.5 rounded border border-slate-200">
+              已投递
+            </span>
+          {% else %}
+            <form method="post" action="/jobs/{{ it.job.id }}/apply">
+              <button class="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded shadow-sm transition-colors" type="submit">
+                一键投递
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
 
     {% if items|length == 0 %}
       <div class="p-12 flex flex-col items-center justify-center text-slate-500">
@@ -360,38 +343,38 @@
 
   <script>
     (function () {
-      const btn = document.getElementById('imp-prefill');
       const urlInput = document.getElementById('imp-url');
-      const st = document.getElementById('imp-status');
-      const setSt = (m) => { if (st) st.textContent = m || ''; };
-
+      const btn = document.getElementById('imp-prefill');
+      const status = document.getElementById('imp-status');
       const setVal = (id, v) => {
         const el = document.getElementById(id);
         if (!el) return;
-        if (typeof v === 'undefined' || v === null) return;
-        el.value = v;
+        el.value = v || '';
       };
+      const setStatus = (msg) => { if (status) status.textContent = msg || ''; };
+      if (!urlInput || !btn) return;
 
-      if (!btn || !urlInput) return;
       btn.addEventListener('click', async () => {
         const url = (urlInput.value || '').trim();
-        if (!url) { setSt('请输入 URL。'); return; }
-        setSt('正在解析...');
+        if (!url) {
+          setStatus('请输入岗位详情页 URL。');
+          return;
+        }
+        setStatus('正在解析链接并填充...');
         try {
           const resp = await fetch('/api/prefill?url=' + encodeURIComponent(url), { credentials: 'same-origin' });
           if (!resp.ok) throw new Error('http ' + resp.status);
           const info = await resp.json();
-          setVal('imp-title', info.title || '');
-          setVal('imp-company', info.company_name || '');
-          setVal('imp-source', info.source_url || url);
-          setVal('imp-excerpt', info.excerpt || '');
-          setVal('imp-salary', info.salary_text || '');
-          if (info.published_at) setVal('imp-published', info.published_at);
+          if (info.title) setVal('imp-title', info.title);
+          if (info.company_name) setVal('imp-company', info.company_name);
           if (info.city) setVal('imp-city', info.city);
-          setSt('已填充，请检查后点击“导入”。');
+          if (info.salary_text) setVal('imp-salary', info.salary_text);
+          if (info.published_at) setVal('imp-published', info.published_at);
+          if (info.source_url) setVal('imp-source', info.source_url);
+          if (info.excerpt) setVal('imp-excerpt', info.excerpt);
+          setStatus('已填充。请检查后点击“导入”。');
         } catch (e) {
-          setSt('解析失败：请手动填写并导入。');
-          setVal('imp-source', url);
+          setStatus('自动填充失败，请手动填写或换一个更具体的岗位详情页链接。');
         }
       });
     })();

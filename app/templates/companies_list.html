@@ -1,10 +1,16 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div>
-      <h1 class="text-xl font-semibold">企业与网申入口</h1>
-      <p class="text-sm text-slate-600 mt-1">只收录官方招聘网址/网申入口，便于合规查找与投递。</p>
+      <h1 class="text-xl font-semibold">企业库维护</h1>
+      <p class="text-sm text-slate-600 mt-1">维护官方招聘网址/网申入口，便于合规查找与投递。</p>
       <p class="text-sm text-slate-600 mt-1">共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页 · 每页 {{ page_size }} 条。</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/companies">清空筛选</a>
+      {% if user and user.is_admin %}
+        <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/admin/sources">采集源管理</a>
+      {% endif %}
     </div>
   </div>
 
@@ -12,7 +18,7 @@
     <section class="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
       <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 class="font-semibold text-slate-900">采集状态(管理员)</h2>
+          <h2 class="font-semibold text-slate-900">系统与采集状态(管理员)</h2>
           <div class="mt-1 text-sm text-slate-600">
             上次采集: {% if sources_summary.last_run_at %}{{ sources_summary.last_run_at | fmt_dt("%Y-%m-%d %H:%M") }}{% else %}-{% endif %}
             · enabled={{ sources_summary.enabled }}/{{ sources_summary.total }}
@@ -20,27 +26,46 @@
             · error={{ sources_summary.error }}
           </div>
         </div>
-        <div class="flex gap-2">
-          <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/admin/sources">管理采集源</a>
-          <a class="text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" href="/admin/sources/new">新增采集源</a>
+        <div class="flex gap-2 flex-wrap">
+          <form action="/admin/crawl/run" method="post" class="flex gap-2 items-center">
+            <input type="hidden" name="mode" value="official" />
+            <input type="hidden" name="since_days" value="180" />
+            <button class="text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">立即采集(official/180d)</button>
+          </form>
+          <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/admin/sources/new">新增采集源</a>
         </div>
       </div>
 
       {% if sources_recent and sources_recent|length > 0 %}
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="mt-4 bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
+          <div class="grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b border-slate-200 bg-white">
+            <div class="col-span-4">source_name</div>
+            <div class="col-span-2">kind</div>
+            <div class="col-span-2">enabled</div>
+            <div class="col-span-2">last_status</div>
+            <div class="col-span-2">last_run</div>
+          </div>
           {% for s in sources_recent %}
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div class="flex items-center justify-between gap-2">
-                <div class="text-sm font-medium text-slate-900 truncate">{{ s.name }}</div>
-                <span class="text-xs px-2 py-0.5 rounded border {% if s.last_status == 'ok' %}bg-emerald-50 text-emerald-700 border-emerald-100{% elif s.last_status == 'error' %}bg-red-50 text-red-700 border-red-100{% else %}bg-white text-slate-700 border-slate-200{% endif %}">
+            <div class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 items-center">
+              <div class="col-span-4 min-w-0">
+                <div class="text-sm font-semibold text-slate-900 truncate">{{ s.name }}</div>
+                {% if s.last_error %}
+                  <div class="text-xs text-red-700 truncate" title="{{ s.last_error }}">{{ s.last_error }}</div>
+                {% endif %}
+              </div>
+              <div class="col-span-2 text-sm text-slate-700 font-mono">{{ s.kind }}</div>
+              <div class="col-span-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded border text-xs {% if s.enabled %}bg-emerald-50 text-emerald-700 border-emerald-100{% else %}bg-slate-50 text-slate-600 border-slate-200{% endif %}">
+                  {{ "on" if s.enabled else "off" }}
+                </span>
+              </div>
+              <div class="col-span-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded border text-xs {% if s.last_status == 'ok' %}bg-emerald-50 text-emerald-700 border-emerald-100{% elif s.last_status == 'error' %}bg-red-50 text-red-700 border-red-100{% else %}bg-white text-slate-700 border-slate-200{% endif %}">
                   {{ s.last_status or "-" }}
                 </span>
               </div>
-              <div class="mt-1 text-xs text-slate-600">
-                kind={{ s.kind }} · enabled={{ 1 if s.enabled else 0 }}
-              </div>
-              <div class="mt-1 text-xs text-slate-500">
-                last: {% if s.last_run_at %}{{ s.last_run_at | fmt_dt("%Y-%m-%d %H:%M") }}{% else %}-{% endif %}
+              <div class="col-span-2 text-xs text-slate-600 font-mono">
+                {% if s.last_run_at %}{{ s.last_run_at | fmt_dt("%m-%d %H:%M") }}{% else %}-{% endif %}
               </div>
             </div>
           {% endfor %}
@@ -52,17 +77,17 @@
   {% if user and user.is_admin %}
     <details class="mt-4" {% if show_import %}open{% endif %}>
       <summary class="cursor-pointer text-sm text-slate-700">导入企业清单(管理员)</summary>
-      <div class="mt-3 bg-white border rounded-2xl p-4 shadow-sm">
+      <div class="mt-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
         <form class="space-y-3" method="post" action="/admin/companies/import" enctype="multipart/form-data">
           <div>
             <label class="block text-xs text-slate-600">文件(.txt 或 .xlsx)</label>
             <input class="mt-1 w-full" type="file" name="file" accept=".txt,.xlsx" required />
-            <div class="text-xs text-slate-500 mt-1">导入后会补全企业与网申入口，并可自动生成 Official:* 采集源。</div>
+            <div class="text-xs text-slate-500 mt-1">导入后会补全企业与网申入口，并可自动生成 `Official:*` 采集源。</div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-slate-600">Proxy(可选)</label>
-              <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="proxy" placeholder="http://127.0.0.1:7890" />
+              <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="proxy" placeholder="http://127.0.0.1:7890" />
             </div>
             <div class="flex items-end">
               <label class="inline-flex items-center gap-2 text-sm text-slate-700">
@@ -71,116 +96,121 @@
               </label>
             </div>
           </div>
-          <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">导入</button>
-          <a class="ml-2 text-sm underline text-slate-600 hover:text-slate-900" href="/admin/sources">去采集页查看上次采集时间</a>
+          <div class="flex gap-2">
+            <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">导入</button>
+            <a class="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" href="/admin/sources">查看上次采集时间</a>
+          </div>
         </form>
       </div>
     </details>
   {% endif %}
 
-  <form class="mt-5 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white border rounded p-4" method="get" action="/companies">
-    <div class="md:col-span-2">
-      <label class="block text-xs text-slate-600">关键词</label>
-      <input class="mt-1 w-full px-3 py-2 border rounded" name="q" value="{{ filters.q }}" placeholder="公司名称" />
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600">总部/核心研发地</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="hq">
-        <option value="">全部</option>
-        {% for it in hq_options %}
-          <option value="{{ it }}" {% if filters.hq == it %}selected{% endif %}>{{ it }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600">行业板块</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="industry">
-        <option value="">全部</option>
-        {% for it in industry_options %}
-          <option value="{{ it }}" {% if filters.industry == it %}selected{% endif %}>{{ it }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600">机构类型</label>
-      <select class="mt-1 w-full px-3 py-2 border rounded" name="company_type">
-        <option value="">全部</option>
-        {% for it in company_type_options %}
-          <option value="{{ it }}" {% if filters.company_type == it %}selected{% endif %}>{{ it }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="flex items-end">
-      <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-        <input type="hidden" name="has_entry" value="0" />
-        <input type="checkbox" name="has_entry" value="1" {% if filters.has_entry %}checked{% endif %} />
-        仅显示有网申入口
-      </label>
-    </div>
-    <div class="md:col-span-6 flex gap-2">
-      <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">筛选</button>
-      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/companies">清空</a>
-    </div>
-  </form>
+  <section class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+    <form class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" method="get" action="/companies">
+      <div class="md:col-span-4">
+        <label class="block text-xs text-slate-600">关键词</label>
+        <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="q" value="{{ filters.q }}" placeholder="公司名称" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">总部/核心研发地</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="hq">
+          <option value="">全部</option>
+          {% for it in hq_options %}
+            <option value="{{ it }}" {% if filters.hq == it %}selected{% endif %}>{{ it }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">行业板块</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="industry">
+          <option value="">全部</option>
+          {% for it in industry_options %}
+            <option value="{{ it }}" {% if filters.industry == it %}selected{% endif %}>{{ it }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs text-slate-600">机构类型</label>
+        <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="company_type">
+          <option value="">全部</option>
+          {% for it in company_type_options %}
+            <option value="{{ it }}" {% if filters.company_type == it %}selected{% endif %}>{{ it }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2 flex items-center gap-2">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+          <input type="hidden" name="has_entry" value="0" />
+          <input type="checkbox" name="has_entry" value="1" {% if filters.has_entry %}checked{% endif %} />
+          仅显示有网申入口
+        </label>
+      </div>
+      <div class="md:col-span-12 flex gap-2">
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm" type="submit">筛选</button>
+        <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="/companies">清空</a>
+      </div>
+    </form>
+  </section>
 
-  <div class="mt-5 bg-white border rounded overflow-hidden">
-    <div class="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b bg-slate-50">
+  <section class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs text-slate-500 border-b border-slate-200 bg-slate-50">
       <div class="col-span-3">企业/机构名称</div>
       <div class="col-span-2">总部/核心研发地</div>
-      <div class="col-span-3">重点招聘方向（技术研发类）</div>
+      <div class="col-span-3">重点招聘方向</div>
       <div class="col-span-2">行业板块</div>
       <div class="col-span-2">网申入口</div>
     </div>
 
     {% for c in companies %}
-      <div class="border-b px-4 py-3">
+      <div class="border-b border-slate-100 px-4 py-3 hover:bg-slate-50 transition-colors">
         <div class="md:grid md:grid-cols-12 md:gap-2">
-          <div class="md:col-span-3 font-medium">
-            <a class="underline hover:text-slate-700" href="/companies/{{ c.id }}">{{ c.name }}</a>
+          <div class="md:col-span-3 font-semibold">
+            <a class="hover:text-blue-700" href="/companies/{{ c.id }}">{{ c.name }}</a>
           </div>
           <div class="md:col-span-2 text-slate-700 mt-1 md:mt-0">
-            <span class="md:hidden text-xs text-slate-500">总部/核心研发地：</span>{{ c.hq_location or '-' }}
+            <span class="md:hidden text-xs text-slate-500">总部/核心研发地: </span>{{ c.hq_location or '-' }}
           </div>
           <div class="md:col-span-3 text-slate-700 mt-1 md:mt-0">
-            <span class="md:hidden text-xs text-slate-500">重点招聘方向：</span>{{ c.focus_directions or '-' }}
+            <span class="md:hidden text-xs text-slate-500">重点招聘方向: </span>{{ c.focus_directions or '-' }}
           </div>
           <div class="md:col-span-2 text-slate-700 mt-1 md:mt-0">
-            <span class="md:hidden text-xs text-slate-500">行业板块：</span>{{ c.industry or '-' }}
+            <span class="md:hidden text-xs text-slate-500">行业板块: </span>{{ c.industry or '-' }}
           </div>
           <div class="md:col-span-2 text-sm mt-2 md:mt-0">
             {% if c.recruitment_url %}
               <a class="text-slate-900 underline" href="{{ c.recruitment_url }}" target="_blank" rel="noopener noreferrer">打开</a>
-              <span class="text-slate-500 break-all">{{ c.recruitment_url }}</span>
+              <div class="text-xs text-slate-500 break-all mt-1">{{ c.recruitment_url }}</div>
             {% else %}
               <span class="text-slate-500">-</span>
             {% endif %}
           </div>
         </div>
-        <div class="text-xs text-slate-500 mt-2">
-          {% if c.company_type %}<span class="inline-block mr-3">机构类型：{{ c.company_type }}</span>{% endif %}
-          {% if c.website %}<span class="inline-block mr-3">官网：{{ c.website }}</span>{% endif %}
+        <div class="text-xs text-slate-500 mt-2 flex gap-4 flex-wrap">
+          {% if c.company_type %}<span>机构类型: {{ c.company_type }}</span>{% endif %}
+          {% if c.website %}<span>官网: {{ c.website }}</span>{% endif %}
         </div>
       </div>
     {% endfor %}
 
     {% if companies|length == 0 %}
-      <div class="px-4 py-8 text-sm text-slate-600">暂无公司入口数据。</div>
+      <div class="px-4 py-10 text-sm text-slate-600">暂无企业数据。</div>
     {% endif %}
-  </div>
+  </section>
 
   <div class="mt-4 flex items-center justify-between">
     <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
     <div class="flex gap-2">
       {% if has_prev %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ prev_url }}">上一页</a>
+        <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="{{ prev_url }}">上一页</a>
       {% else %}
-        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
+        <span class="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 text-sm">上一页</span>
       {% endif %}
       {% if has_next %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ next_url }}">下一页</a>
+        <a class="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm" href="{{ next_url }}">下一页</a>
       {% else %}
-        <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
+        <span class="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 text-sm">下一页</span>
       {% endif %}
     </div>
   </div>
 {% endblock %}
+

@@ -138,6 +138,13 @@ def jobs_list(
         .limit(1)
         .scalar_subquery()
     )
+    source_url_1 = (
+        select(JobSource.source_url)
+        .where(JobSource.job_posting_id == JobPosting.id)
+        .order_by(JobSource.fetched_at.desc().nullslast())
+        .limit(1)
+        .scalar_subquery()
+    )
     has_applied_1 = (
         exists(
             select(1).where(
@@ -155,6 +162,7 @@ def jobs_list(
             Company,
             source_kind_1.label("source_kind_1"),
             source_type_1.label("source_type_1"),
+            source_url_1.label("source_url_1"),
             has_applied_1,
         )
         .outerjoin(Company, Company.id == JobPosting.company_id)
@@ -295,8 +303,17 @@ def jobs_list(
     next_url = str(request.url.include_query_params(page=page + 1)) if has_next else ""
 
     items = []
-    for job, comp, sk1, st1, has_applied in page_rows:
-        items.append({"job": job, "company": comp, "source_kind": sk1, "source_type": st1, "has_applied": bool(has_applied)})
+    for job, comp, sk1, st1, su1, has_applied in page_rows:
+        items.append(
+            {
+                "job": job,
+                "company": comp,
+                "source_kind": sk1,
+                "source_type": st1,
+                "source_url": su1,
+                "has_applied": bool(has_applied),
+            }
+        )
 
     industries = [r[0] for r in db.execute(select(Company.industry).where(Company.industry.is_not(None)).distinct()).all()]
     industries = sorted([x for x in industries if x])
@@ -624,7 +641,7 @@ def create_application_from_job(
         city_text=job.city,
         source_url=src_url,
         channel=picked_channel,
-        stage="未投递",
+        stage="\u672a\u6295\u9012",
         priority=3,
     )
     db.add(app)

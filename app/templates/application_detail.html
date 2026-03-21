@@ -60,7 +60,7 @@
           </select>
           <input class="mt-2 w-full px-3 py-2 border rounded" name="channel_other" placeholder="其他(可选, 手动输入)" value="{{ '' if (app.channel or '') in channels else (app.channel or '') }}" />
         </div>
-        <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">保存</button>
+        <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">保存</button>
       </form>
     </div>
 
@@ -97,7 +97,7 @@
           <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[100px]" name="note"></textarea>
         </div>
         <div class="md:col-span-3">
-          <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">添加</button>
+          <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">添加</button>
         </div>
       </form>
 
@@ -126,7 +126,7 @@
                   </div>
                 </div>
                 <div class="relative pl-10">
-                  <div class="absolute left-3 top-4 w-5 h-5 rounded-full bg-sky-600 ring-4 ring-white"></div>
+                  <div class="absolute left-3 top-4 w-5 h-5 rounded-full bg-blue-600 ring-4 ring-white"></div>
                   <div class="border rounded-xl p-4 bg-white shadow-sm">
                     <div class="flex items-start justify-between gap-3 flex-wrap">
                       <div>
@@ -170,7 +170,7 @@
                             <textarea class="mt-1 w-full px-3 py-2 border rounded min-h-[90px]" name="note">{{ e.note or '' }}</textarea>
                           </div>
                           <div class="md:col-span-3 flex gap-2">
-                            <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">保存</button>
+                            <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">保存</button>
                             <button class="px-3 py-2 rounded border bg-white hover:bg-slate-50" type="submit" formmethod="post" formaction="/applications/{{ app.id }}/events/{{ e.id }}/delete">删除</button>
                           </div>
                         </form>

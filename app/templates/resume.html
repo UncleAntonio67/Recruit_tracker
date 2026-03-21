@@ -56,7 +56,7 @@
           <div class="text-xs text-slate-500 mt-1">例如: { "github": "https://...", "blog": "https://...", "linkedin": "..." }</div>
         </div>
 
-        <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">保存</button>
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">保存</button>
       </form>
     </div>
 
@@ -68,7 +68,7 @@
         <div class="p-3 rounded-xl border bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">姓名</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-sky-50" type="button" data-copy="{{ profile.full_name or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.full_name or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.full_name or '-' }}</div>
         </div>
@@ -76,7 +76,7 @@
         <div class="p-3 rounded-xl border bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">电话</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-sky-50" type="button" data-copy="{{ profile.phone or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.phone or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.phone or '-' }}</div>
         </div>
@@ -84,7 +84,7 @@
         <div class="p-3 rounded-xl border bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">邮箱</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-sky-50" type="button" data-copy="{{ profile.email or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.email or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.email or '-' }}</div>
         </div>
@@ -92,7 +92,7 @@
         <div class="p-3 rounded-xl border bg-slate-50">
           <div class="flex items-center justify-between gap-2">
             <div class="text-xs text-slate-500">城市</div>
-            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-sky-50" type="button" data-copy="{{ profile.city or '' }}">复制</button>
+            <button class="text-xs px-2 py-1 rounded border bg-white hover:bg-slate-50" type="button" data-copy="{{ profile.city or '' }}">复制</button>
           </div>
           <div class="mt-1 text-sm text-slate-900 break-all">{{ profile.city or '-' }}</div>
         </div>
@@ -100,11 +100,11 @@
         <details class="p-3 rounded-xl border bg-white">
           <summary class="cursor-pointer text-sm text-slate-700">复制大段文本</summary>
           <div class="mt-3 space-y-2">
-            <button class="w-full text-sm px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="button" data-copy="{{ (profile.summary or '') }}">复制个人简介</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" type="button" data-copy="{{ (profile.skills or '') }}">复制技能栈</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" type="button" data-copy="{{ (profile.experience or '') }}">复制工作经历要点</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" type="button" data-copy="{{ (profile.projects or '') }}">复制项目经历要点</button>
-            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-sky-50" type="button" data-copy="{{ (profile.education or '') }}">复制教育经历</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="button" data-copy="{{ (profile.summary or '') }}">复制个人简介</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.skills or '') }}">复制技能栈</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.experience or '') }}">复制工作经历要点</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.projects or '') }}">复制项目经历要点</button>
+            <button class="w-full text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" type="button" data-copy="{{ (profile.education or '') }}">复制教育经历</button>
           </div>
         </details>
       </div>
@@ -133,4 +133,3 @@
     })();
   </script>
 {% endblock %}
-

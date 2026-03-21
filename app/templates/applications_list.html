@@ -59,8 +59,8 @@
       <input class="mt-1 w-full px-3 py-2 border rounded" type="datetime-local" name="applied_to" value="{{ filters.applied_to }}" />
     </div>
     <div class="flex items-end gap-2">
-      <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">筛选</button>
-      <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/applications">清空</a>
+      <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">筛选</button>
+      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/applications">清空</a>
     </div>
   </form>
 
@@ -84,7 +84,7 @@
           <div class="col-span-3 text-slate-700">{{ a.company_text or "-" }}</div>
           <div class="col-span-2 text-slate-700">{{ a.city_text or "-" }}</div>
           <div class="col-span-2 text-slate-700">
-            <span class="inline-flex items-center px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-100 text-xs">
+            <span class="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 text-xs">
               {{ stage_labels.get(a.stage, a.stage) }}
             </span>
           </div>
@@ -101,12 +101,12 @@
     <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
     <div class="flex gap-2">
       {% if has_prev %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ prev_url }}">上一页</a>
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ prev_url }}">上一页</a>
       {% else %}
         <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
       {% endif %}
       {% if has_next %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ next_url }}">下一页</a>
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ next_url }}">下一页</a>
       {% else %}
         <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
       {% endif %}

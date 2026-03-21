@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="bg-white/80 backdrop-blur border border-sky-100 rounded-2xl p-5 shadow-sm">
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
     <div class="flex items-start justify-between gap-4 flex-wrap">
       <div class="min-w-[280px]">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ job.title }}</h1>
@@ -16,7 +16,7 @@
 
         <div class="mt-3 flex flex-wrap gap-2">
           {% if job.salary_text or job.salary_min_k or job.salary_max_k %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100 text-xs font-medium">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
               薪资:
               {% if job.salary_text %}
                 {{ job.salary_text }}
@@ -70,7 +70,7 @@
           {% if existing_app %}
             <button class="px-3 py-2 rounded-lg bg-slate-200 text-slate-500 cursor-not-allowed" type="button" disabled>已创建</button>
           {% else %}
-            <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">创建投递</button>
+            <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">创建投递</button>
           {% endif %}
         </form>
       </div>
@@ -93,7 +93,7 @@
               <ul class="mt-2 space-y-1 text-sm text-slate-700 leading-6">
                 {% for it in s["items"] %}
                   <li class="flex gap-2">
-                    <span class="mt-2 w-1.5 h-1.5 rounded-full bg-sky-500 flex-none"></span>
+                    <span class="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 flex-none"></span>
                     <span>{{ it | safe }}</span>
                   </li>
                 {% endfor %}
@@ -112,8 +112,8 @@
       <h2 class="font-semibold text-slate-900">来源与入口</h2>
 
       {% if company and company.recruitment_url %}
-        <div class="mt-3 p-3 rounded-xl bg-sky-50 border border-sky-100">
-          <div class="text-xs text-sky-700 font-semibold">Official entrypoint</div>
+        <div class="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+          <div class="text-xs text-blue-700 font-semibold">Official entrypoint</div>
           <a class="mt-1 block text-sm text-slate-900 underline break-all" href="{{ company.recruitment_url }}" target="_blank" rel="noreferrer">{{ company.recruitment_url }}</a>
         </div>
       {% endif %}

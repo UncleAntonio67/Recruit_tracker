@@ -25,9 +25,9 @@
             <option value="{{ d }}" {% if d == 180 %}selected{% endif %}>近 {{ d }} 天</option>
           {% endfor %}
         </select>
-        <button class="text-sm px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">立即采集</button>
+        <button class="text-sm px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">立即采集</button>
       </form>
-      <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/admin/sources/new">新增采集源</a>
+      <a class="text-sm px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/admin/sources/new">新增采集源</a>
     </div>
   </div>
 
@@ -63,10 +63,10 @@
           <div class="flex flex-col gap-2">
             <form action="/admin/sources/{{ s.id }}/run" method="post">
               <input type="hidden" name="since_days" value="180" />
-              <button class="text-sm px-3 py-1 rounded bg-sky-600 text-white hover:bg-sky-700 w-full" type="submit">采集此源</button>
+              <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 w-full" type="submit">采集此源</button>
             </form>
             <form action="/admin/sources/{{ s.id }}/toggle" method="post">
-              <button class="text-sm px-3 py-1 rounded border bg-white hover:bg-sky-50 w-full" type="submit">切换启用</button>
+              <button class="text-sm px-3 py-1 rounded border bg-white hover:bg-slate-50 w-full" type="submit">切换启用</button>
             </form>
           </div>
         </div>

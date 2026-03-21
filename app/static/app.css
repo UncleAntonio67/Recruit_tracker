@@ -5,26 +5,23 @@ pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* Make forms feel consistent (light blue focus like BOSS). */
-input:focus, select:focus, textarea:focus, button:focus {
-  outline: none;
-}
+/* Consistent focus ring (prototype-like). */
+input:focus, select:focus, textarea:focus, button:focus { outline: none; }
 input:focus, select:focus, textarea:focus {
-  border-color: #38bdf8; /* sky-400 */
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 /* Make <details><summary> look like a clickable control. */
 summary { list-style: none; }
 summary::-webkit-details-marker { display: none; }
-
 summary::after {
-  content: "▾";
+  content: "v";
   display: inline-block;
   margin-left: 8px;
   color: #64748b; /* slate-500 */
 }
-details[open] summary::after { content: "▴"; }
+details[open] summary::after { content: "^"; }
 
 /* Slightly nicer underline defaults for links. */
 a { text-underline-offset: 3px; }

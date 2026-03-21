@@ -30,7 +30,7 @@
               </label>
             </div>
           </div>
-          <button class="px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700" type="submit">导入</button>
+          <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">导入</button>
           <a class="ml-2 text-sm underline text-slate-600 hover:text-slate-900" href="/admin/sources">去采集页查看上次采集时间</a>
         </form>
       </div>
@@ -77,8 +77,8 @@
       </label>
     </div>
     <div class="md:col-span-6 flex gap-2">
-      <button class="px-3 py-2 rounded bg-sky-600 text-white hover:bg-sky-700" type="submit">筛选</button>
-      <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="/companies">清空</a>
+      <button class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700" type="submit">筛选</button>
+      <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="/companies">清空</a>
     </div>
   </form>
 
@@ -131,12 +131,12 @@
     <div class="text-sm text-slate-600">第 {{ page }} / {{ total_pages }} 页</div>
     <div class="flex gap-2">
       {% if has_prev %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ prev_url }}">上一页</a>
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ prev_url }}">上一页</a>
       {% else %}
         <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">上一页</span>
       {% endif %}
       {% if has_next %}
-        <a class="px-3 py-2 rounded border bg-white hover:bg-sky-50" href="{{ next_url }}">下一页</a>
+        <a class="px-3 py-2 rounded border bg-white hover:bg-slate-50" href="{{ next_url }}">下一页</a>
       {% else %}
         <span class="px-3 py-2 rounded border bg-slate-50 text-slate-400">下一页</span>
       {% endif %}

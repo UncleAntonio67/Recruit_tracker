@@ -74,6 +74,41 @@ def companies_list(
     types = [r[0] for r in db.execute(select(Company.company_type).where(Company.company_type.is_not(None)).distinct()).all()]
     types = sorted([x for x in types if x])
 
+    sources_summary = None
+    sources_recent = []
+    if user and user.is_admin:
+        total_sources = int(db.execute(select(func.count()).select_from(select(CrawlSource.id).subquery())).scalar_one() or 0)
+        enabled_sources = int(
+            db.execute(select(func.count()).select_from(select(CrawlSource.id).where(CrawlSource.enabled == True).subquery())).scalar_one()  # noqa: E712
+            or 0
+        )
+        ok_sources = int(
+            db.execute(
+                select(func.count()).select_from(
+                    select(CrawlSource.id).where(and_(CrawlSource.last_status == "ok", CrawlSource.enabled == True)).subquery()  # noqa: E712
+                )
+            ).scalar_one()
+            or 0
+        )
+        error_sources = int(
+            db.execute(
+                select(func.count()).select_from(
+                    select(CrawlSource.id).where(and_(CrawlSource.last_status == "error", CrawlSource.enabled == True)).subquery()  # noqa: E712
+                )
+            ).scalar_one()
+            or 0
+        )
+        last_run_at = db.execute(select(func.max(CrawlSource.last_run_at))).scalar_one()
+
+        sources_summary = {
+            "total": total_sources,
+            "enabled": enabled_sources,
+            "ok": ok_sources,
+            "error": error_sources,
+            "last_run_at": last_run_at,
+        }
+        sources_recent = db.execute(select(CrawlSource).order_by(CrawlSource.created_at.desc()).limit(12)).scalars().all()
+
     return templates.TemplateResponse(
         "companies_list.html",
         {
@@ -91,6 +126,8 @@ def companies_list(
             "industry_options": industries,
             "company_type_options": types,
             "hq_options": HQ_LOCATION_OPTIONS,
+            "sources_summary": sources_summary,
+            "sources_recent": sources_recent,
             "page": page,
             "page_size": page_size,
             "total": total,

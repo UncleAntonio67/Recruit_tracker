@@ -9,8 +9,8 @@
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-900 font-sans">
     <header class="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <a class="flex items-center gap-2" href="/jobs">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <a class="flex items-center gap-2 flex-none" href="/jobs">
           <span class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">JT</span>
           <span class="text-xl font-bold text-slate-800 tracking-tight">
             JobTracker <span class="text-blue-600">Pro</span>
@@ -19,33 +19,33 @@
 
         {% if user %}
           {% set p = request.url.path %}
-          <nav class="hidden md:flex items-center gap-8">
+          <nav class="flex-1 flex items-center gap-6 md:gap-8 overflow-x-auto">
             <a href="/jobs"
-               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none {% if p.startswith('/jobs') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none whitespace-nowrap {% if p.startswith('/jobs') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
               找工作
             </a>
             <a href="/applications"
-               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none {% if p.startswith('/applications') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none whitespace-nowrap {% if p.startswith('/applications') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
               投递管理
             </a>
             <a href="/resume"
-               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none {% if p.startswith('/resume') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none whitespace-nowrap {% if p.startswith('/resume') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
               简历管理
             </a>
             <a href="/companies"
-               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none {% if p.startswith('/companies') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+               class="py-5 text-sm font-medium transition-colors border-b-2 outline-none whitespace-nowrap {% if p.startswith('/companies') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
               企业库维护
             </a>
             {% if user.is_admin %}
               <a href="/admin/sources"
-                 class="py-5 text-sm font-medium transition-colors border-b-2 outline-none {% if p.startswith('/admin') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
+                 class="py-5 text-sm font-medium transition-colors border-b-2 outline-none whitespace-nowrap {% if p.startswith('/admin') %}border-blue-600 text-blue-600{% else %}border-transparent text-slate-500 hover:text-slate-800{% endif %}">
                 采集源
               </a>
             {% endif %}
           </nav>
         {% endif %}
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-none">
           {% if user %}
             {% if user.is_admin %}
               <div class="text-sm text-slate-500 hidden sm:block">Admin 模式</div>

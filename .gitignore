@@ -52,9 +52,12 @@ dbg*.err.log
 # Curl cookie jar accidentally created by some scripts/tools
 -b
 
+# Occasionally a mojibake duplicate of "原型.txt" can show up on Windows.
+Ô*.txt
+原型.txt
+
 # IDEs / OS
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
-

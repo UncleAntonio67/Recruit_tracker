@@ -1,150 +1,194 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <div class="min-w-[280px]">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ job.title }}</h1>
-        <div class="text-sm text-slate-600 mt-2 flex flex-wrap gap-x-3 gap-y-1 items-center">
-          <span class="font-medium text-slate-800">{{ company.name if company else "未关联公司" }}</span>
-          <span class="text-slate-300">|</span>
-          <span>{{ job.city or "-" }}</span>
-          <span class="text-slate-300">|</span>
-          <span>发布: {{ job.published_at | fmt_dt("%Y-%m-%d") if job.published_at else "-" }}</span>
-          <span class="text-slate-300">|</span>
-          <span>更新: {{ job.last_seen_at | fmt_dt("%Y-%m-%d") if job.last_seen_at else "-" }}</span>
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+    <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div class="min-w-[260px]">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ job.title }}</h1>
+            {% if existing_app %}
+              <span class="inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                已投递
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="mt-2 text-sm text-slate-600 flex flex-wrap gap-x-3 gap-y-1 items-center">
+            <span class="font-medium text-slate-800">{{ company.name if company else "未关联公司" }}</span>
+            <span class="text-slate-300">|</span>
+            <span>{{ job.city or "-" }}</span>
+            <span class="text-slate-300">|</span>
+            <span>发布时间: {{ job.published_at | fmt_dt("%Y-%m-%d") if job.published_at else "-" }}</span>
+            <span class="text-slate-300">|</span>
+            <span>最近更新: {{ job.last_seen_at | fmt_dt("%Y-%m-%d") if job.last_seen_at else "-" }}</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap gap-2">
+            {% if job.salary_text or job.salary_min_k or job.salary_max_k %}
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
+                薪资:
+                {% if job.salary_text %}
+                  {{ job.salary_text }}
+                {% elif job.salary_min_k and job.salary_max_k %}
+                  {{ job.salary_min_k }}-{{ job.salary_max_k }}k/月
+                {% elif job.salary_min_k %}
+                  {{ job.salary_min_k }}k+/月
+                {% elif job.salary_max_k %}
+                  {{ job.salary_max_k }}k/月以内
+                {% endif %}
+              </span>
+            {% endif %}
+            {% if job.seniority %}
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-slate-700 border border-slate-200 text-xs font-medium">
+                {{ job.seniority }}
+              </span>
+            {% endif %}
+            {% if job.department %}
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-slate-700 border border-slate-200 text-xs font-medium">
+                {{ job.department }}
+              </span>
+            {% endif %}
+            {% set tags = job.tags or [] %}
+            {% if tags and tags|length > 0 %}
+              {% for t in tags[:10] %}
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-50 text-slate-700 border border-slate-200 text-xs">
+                  {{ t }}
+                </span>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          <div class="mt-4 flex items-center gap-3 flex-wrap">
+            {% if sources and sources|length > 0 and sources[0].source_url %}
+              <a class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+                 href="{{ sources[0].source_url }}" target="_blank" rel="noreferrer">
+                打开原文
+                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 3h7v7"></path>
+                  <path d="M10 14L21 3"></path>
+                  <path d="M21 14v7H3V3h7"></path>
+                </svg>
+              </a>
+            {% endif %}
+            <a class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+               href="/jobs">
+              返回列表
+            </a>
+            <a class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+               href="https://www.baidu.com/s?wd={{ (company.name if company else '') ~ ' ' ~ job.title }}" target="_blank" rel="noreferrer">
+              备用搜索
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 border-t border-slate-100 pt-5">
+        <div class="flex items-baseline justify-between gap-3 flex-wrap">
+          <h2 class="font-semibold text-slate-900">岗位介绍</h2>
+          <div class="text-xs text-slate-500">仅展示结构化摘要, 不做全文快照</div>
         </div>
 
-        <div class="mt-3 flex flex-wrap gap-2">
-          {% if job.salary_text or job.salary_min_k or job.salary_max_k %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
-              薪资:
-              {% if job.salary_text %}
-                {{ job.salary_text }}
-              {% elif job.salary_min_k and job.salary_max_k %}
-                {{ job.salary_min_k }}-{{ job.salary_max_k }}k/月
-              {% elif job.salary_min_k %}
-                {{ job.salary_min_k }}k+/月
-              {% elif job.salary_max_k %}
-                {{ job.salary_max_k }}k/月以内
-              {% endif %}
-            </span>
-          {% endif %}
-          {% if job.seniority %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-slate-700 border border-slate-200 text-xs font-medium">{{ job.seniority }}</span>
-          {% endif %}
-          {% if job.department %}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-slate-700 border border-slate-200 text-xs font-medium">{{ job.department }}</span>
-          {% endif %}
-          {% if job.tags and job.tags|length > 0 %}
-            {% for t in job.tags[:8] %}
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-50 text-slate-700 border border-slate-200 text-xs">{{ t }}</span>
+        {% set secs = (job.excerpt | job_sections) %}
+        {% if secs and secs|length > 0 %}
+          <div class="mt-4 space-y-6">
+            {% for s in secs %}
+              <section>
+                <h3 class="text-sm font-semibold text-slate-800">{{ s["title"] }}</h3>
+                <ul class="mt-2 space-y-1 text-sm text-slate-700 leading-6">
+                  {% for it in s["items"] %}
+                    <li class="flex gap-2">
+                      <span class="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 flex-none"></span>
+                      <span>{{ it | safe }}</span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </section>
             {% endfor %}
-          {% endif %}
-        </div>
+          </div>
+        {% elif job.excerpt %}
+          <pre class="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-800">{{ job.excerpt }}</pre>
+        {% else %}
+          <p class="mt-3 text-sm text-slate-600">暂无摘要。建议从原文链接导入，或手动补充摘要字段。</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside class="space-y-4">
+      <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+        <h2 class="font-semibold text-slate-900">创建投递记录</h2>
+        <p class="text-xs text-slate-500 mt-1">用于记录投递时间、面试进度和事件时间线。</p>
 
         {% if existing_app %}
-          <div class="mt-4">
-            <a class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border bg-white hover:bg-slate-50" href="/applications/{{ existing_app.id }}">
-              已有投递记录: {{ existing_app.stage }}
+          <div class="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+            <div class="text-sm text-emerald-800 font-medium">已存在投递记录</div>
+            <a class="mt-2 inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-white border border-emerald-200 hover:bg-emerald-100/40"
+               href="/applications/{{ existing_app.id }}">
+              打开投递记录
+            </a>
+          </div>
+        {% else %}
+          <form class="mt-4 space-y-3" method="post" action="/jobs/{{ job.id }}/apply">
+            <div>
+              <label class="block text-xs text-slate-600">渠道(可选)</label>
+              <select class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel_select">
+                <option value="">(不填)</option>
+                {% for ch in ["官网网申","国聘","Boss","前程无忧(51job)","Indeed","内推","猎头","公众号","邮件","其他"] %}
+                  <option value="{{ ch }}">{{ ch }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-600">备注(可选)</label>
+              <input class="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm" name="channel_other" placeholder="例如: 某同事内推 / 某群" />
+            </div>
+            <button class="w-full px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium" type="submit">
+              一键创建投递
+            </button>
+          </form>
+        {% endif %}
+      </section>
+
+      <section class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+        <h2 class="font-semibold text-slate-900">来源与入口</h2>
+
+        {% if company and company.recruitment_url %}
+          <div class="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+            <div class="text-xs text-blue-700 font-semibold">Official entrypoint</div>
+            <a class="mt-1 block text-sm text-slate-900 underline break-all" href="{{ company.recruitment_url }}" target="_blank" rel="noreferrer">
+              {{ company.recruitment_url }}
             </a>
           </div>
         {% endif %}
-      </div>
 
-      <div class="min-w-[280px]">
-        <div class="text-xs text-slate-500">从这里直接创建投递记录</div>
-        <form class="mt-2 flex items-end gap-2 flex-wrap" method="post" action="/jobs/{{ job.id }}/apply">
-          <div>
-            <label class="block text-xs text-slate-600">Channel</label>
-            <select class="mt-1 px-3 py-2 border rounded-lg bg-white" name="channel_select">
-              <option value="">(optional)</option>
-              {% for ch in ["官网网申","国聘","Boss","前程无忧(51job)","Indeed","内推","猎头","公众号","邮件","其他"] %}
-                <option value="{{ ch }}">{{ ch }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="flex-1 min-w-[180px]">
-            <label class="block text-xs text-slate-600">Note</label>
-            <input class="mt-1 w-full px-3 py-2 border rounded-lg bg-white" name="channel_other" placeholder="例如: 某同事内推/某群" />
-          </div>
-          {% if existing_app %}
-            <button class="px-3 py-2 rounded-lg bg-slate-200 text-slate-500 cursor-not-allowed" type="button" disabled>已创建</button>
-          {% else %}
-            <button class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">创建投递</button>
-          {% endif %}
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="md:col-span-2 bg-white border rounded-2xl p-5 shadow-sm">
-      <div class="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 class="font-semibold text-slate-900">岗位介绍</h2>
-        <div class="text-xs text-slate-500">仅展示结构化摘要, 不做全文快照</div>
-      </div>
-
-      {% set secs = (job.excerpt | job_sections) %}
-      {% if secs and secs|length > 0 %}
-        <div class="mt-4 space-y-6">
-          {% for s in secs %}
-            <section>
-              <h3 class="text-sm font-semibold text-slate-800">{{ s["title"] }}</h3>
-              <ul class="mt-2 space-y-1 text-sm text-slate-700 leading-6">
-                {% for it in s["items"] %}
-                  <li class="flex gap-2">
-                    <span class="mt-2 w-1.5 h-1.5 rounded-full bg-blue-500 flex-none"></span>
-                    <span>{{ it | safe }}</span>
-                  </li>
-                {% endfor %}
-              </ul>
-            </section>
-          {% endfor %}
+        <div class="mt-4 text-sm text-slate-700 space-y-1">
+          <div><span class="text-slate-500">Company:</span> {{ company.name if company else "-" }}</div>
+          <div><span class="text-slate-500">City:</span> {{ job.city or "-" }}</div>
+          <div><span class="text-slate-500">Department:</span> {{ job.department or "-" }}</div>
+          <div><span class="text-slate-500">Seniority:</span> {{ job.seniority or "-" }}</div>
         </div>
-      {% elif job.excerpt %}
-        <pre class="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-800">{{ job.excerpt }}</pre>
-      {% else %}
-        <p class="mt-3 text-sm text-slate-600">无摘要。建议从来源链接导入, 或手动补充摘要。</p>
-      {% endif %}
-    </div>
 
-    <div class="bg-white border rounded-2xl p-5 shadow-sm">
-      <h2 class="font-semibold text-slate-900">来源与入口</h2>
-
-      {% if company and company.recruitment_url %}
-        <div class="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
-          <div class="text-xs text-blue-700 font-semibold">Official entrypoint</div>
-          <a class="mt-1 block text-sm text-slate-900 underline break-all" href="{{ company.recruitment_url }}" target="_blank" rel="noreferrer">{{ company.recruitment_url }}</a>
-        </div>
-      {% endif %}
-
-      <div class="mt-4 text-sm text-slate-700 space-y-1">
-        <div><span class="text-slate-500">Company:</span> {{ company.name if company else "-" }}</div>
-        <div><span class="text-slate-500">City:</span> {{ job.city or "-" }}</div>
-        <div><span class="text-slate-500">Department:</span> {{ job.department or "-" }}</div>
-        <div><span class="text-slate-500">Seniority:</span> {{ job.seniority or "-" }}</div>
-      </div>
-
-      <h3 class="font-semibold text-slate-900 mt-5">Sources</h3>
-      {% if sources|length == 0 %}
-        <p class="mt-2 text-sm text-slate-600">无来源链接。</p>
-      {% else %}
-        <ul class="mt-3 space-y-3">
-          {% for s in sources %}
-            <li class="text-sm">
-              <div class="text-xs text-slate-500">
-                {{ s.source_type | fmt_source_type }}
-                {% if s.source_kind %} · {{ s.source_kind | fmt_source_kind }}{% endif %}
-                {% if s.source_name %} · {{ s.source_name }}{% endif %}
-              </div>
-              <div class="mt-1 flex items-center gap-3 flex-wrap">
-                <a class="text-slate-900 underline break-all" href="{{ s.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
-                <a class="text-xs text-slate-600 underline" href="https://www.baidu.com/s?wd={{ (company.name if company else '') ~ ' ' ~ job.title }}" target="_blank" rel="noreferrer">备用搜索</a>
-              </div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    </div>
+        <h3 class="font-semibold text-slate-900 mt-5">Sources</h3>
+        {% if not sources or sources|length == 0 %}
+          <p class="mt-2 text-sm text-slate-600">暂无来源链接。</p>
+        {% else %}
+          <ul class="mt-3 space-y-3">
+            {% for s in sources %}
+              <li class="text-sm">
+                <div class="flex items-center gap-2 flex-wrap text-xs text-slate-500">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-700">{{ s.source_type | fmt_source_type }}</span>
+                  {% if s.source_kind %}<span class="inline-flex items-center px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-700">{{ s.source_kind | fmt_source_kind }}</span>{% endif %}
+                  {% if s.source_name %}<span class="inline-flex items-center px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-700">{{ s.source_name }}</span>{% endif %}
+                  {% if s.fetched_at %}<span>fetched: {{ s.fetched_at | fmt_dt("%Y-%m-%d %H:%M") }}</span>{% endif %}
+                </div>
+                <div class="mt-1">
+                  <a class="text-slate-900 underline break-all" href="{{ s.source_url }}" target="_blank" rel="noreferrer">打开原文</a>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    </aside>
   </div>
 {% endblock %}
+

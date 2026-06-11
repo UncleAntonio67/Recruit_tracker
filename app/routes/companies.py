@@ -6,6 +6,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.crawler.source_defaults import infer_official_source
 from app.db import get_db
 from app.models import Company, CrawlSource, User
 from app.ui_options import HQ_LOCATION_OPTIONS
@@ -214,53 +215,7 @@ def company_seed_source(
 
     rec_url = c.recruitment_url.strip()
     src_name = f"Official:{c.name}"
-
-    kind = "html_list"
-    cfg: dict = {
-        "list_url": rec_url,
-        "company_name": c.name,
-        "url_contains": ["job", "jobs", "career", "careers", "recruit", "zhaopin", "hr", "join"],
-        "url_excludes": ["campus", "intern", "xiaozhao", "校园", "校招", "实习"],
-        "title_contains": ["后端", "前端", "全栈", "开发", "工程师", "架构", "数据", "算法", "测试", "金融科技", "新能源", "储能", "锂电", "电池", "化工", "研发", "项目"],
-        "max_items": 200,
-        "source_type": "official",
-    }
-
-    # If it's a Beisen Zhiye portal, prefer the structured API connector.
-    try:
-        from urllib.parse import urlparse
-
-        p = urlparse(rec_url)
-        host = (p.netloc or "").strip()
-        if host.endswith(".m.zhiye.com"):
-            kind = "m_zhiye"
-            cfg = {"base_url": f"{p.scheme}://{host}", "company_name": c.name, "jc": 1, "page_size": 30, "max_pages": 40, "source_type": "official"}
-        elif host.endswith(".zhiye.com"):
-            sub = host[: -len(".zhiye.com")]
-            if sub:
-                kind = "m_zhiye"
-                cfg = {
-                    "base_url": f"{p.scheme}://{sub}.m.zhiye.com",
-                    "company_name": c.name,
-                    "jc": 1,
-                    "page_size": 30,
-                    "max_pages": 40,
-                    "source_type": "official",
-                }
-        elif host.endswith(".hotjob.cn") or host == "hotjob.cn":
-            # Hotjob official portal (wecruit public endpoints).
-            kind = "hotjob"
-            base = f"{p.scheme or 'https'}://{host}" if host else rec_url
-            cfg = {
-                "base_url": base.replace("http://", "https://"),
-                "company_name": c.name,
-                "recruit_type": 2,  # 社招
-                "page_size": 12,
-                "max_pages": 12,
-                "source_type": "official",
-            }
-    except Exception:
-        pass
+    kind, cfg = infer_official_source(c.name, rec_url)
 
     existing = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
     if existing:

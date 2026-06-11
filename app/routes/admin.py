@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin
+from app.crawler.source_defaults import infer_official_source
 from app.db import get_db
 from app.models import Company, CrawlSource, User
 from app.security import hash_password
@@ -109,61 +110,6 @@ def sources_new_page(
     )
 
 
-def _infer_official_source(company_name: str, entry_url: str, *, proxy: str | None) -> tuple[str, dict]:
-    """Infer a CrawlSource kind+config from an official entrypoint URL."""
-
-    from urllib.parse import urlparse
-
-    u = entry_url.strip()
-    p = urlparse(u)
-    host = (p.netloc or "").strip().lower()
-
-    kind = "html_list"
-    cfg: dict = {
-        "list_url": u,
-        "company_name": company_name.strip(),
-        "url_contains": ["job", "jobs", "career", "careers", "recruit", "zhaopin", "hr", "join"],
-        "url_excludes": ["campus", "intern", "xiaozhao", "校园", "校招", "实习"],
-        "max_items": 200,
-        "source_type": "official",
-    }
-
-    # Beisen Zhiye portal: use structured API connector.
-    if host.endswith(".m.zhiye.com"):
-        kind = "m_zhiye"
-        cfg = {"base_url": f"{p.scheme}://{p.netloc}", "company_name": company_name.strip(), "jc": 1, "page_size": 30, "max_pages": 40, "source_type": "official"}
-    elif host.endswith(".zhiye.com"):
-        sub = host[: -len(".zhiye.com")]
-        if sub:
-            kind = "m_zhiye"
-            cfg = {
-                "base_url": f"{p.scheme}://{sub}.m.zhiye.com",
-                "company_name": company_name.strip(),
-                "jc": 1,
-                "page_size": 30,
-                "max_pages": 40,
-                "source_type": "official",
-            }
-    elif host.endswith(".hotjob.cn") or host == "hotjob.cn":
-        kind = "hotjob"
-        base = f"{p.scheme or 'https'}://{p.netloc}" if p.netloc else u
-        cfg = {
-            "base_url": base.replace("http://", "https://"),
-            "company_name": company_name.strip(),
-            "recruit_type": 2,  # 社招
-            "page_size": 12,
-            "max_pages": 12,
-            "source_type": "official",
-        }
-    elif u.lower().endswith((".rss", ".xml")):
-        kind = "rss"
-        cfg = {"feed_url": u, "company_name": company_name.strip(), "source_type": "official"}
-
-    if proxy and proxy.strip():
-        cfg["proxy"] = proxy.strip()
-    return kind, cfg
-
-
 @router.post("/sources/new_simple")
 def sources_new_simple_post(
     request: Request,
@@ -196,7 +142,7 @@ def sources_new_simple_post(
             status_code=400,
         )
 
-    kind, cfg = _infer_official_source(cn, eu, proxy=proxy)
+    kind, cfg = infer_official_source(cn, eu, proxy=proxy)
     s = CrawlSource(kind=kind, name=src_name, enabled=bool(enabled), config=cfg)
     db.add(s)
     db.commit()
@@ -420,7 +366,7 @@ async def companies_import_post(
             try:
                 src_name = f"Official:{c.name}"
                 exists = db.execute(select(CrawlSource).where(CrawlSource.name == src_name)).scalar_one_or_none()
-                kind, cfg = _infer_official_source(c.name, c.recruitment_url, proxy=proxy)
+                kind, cfg = infer_official_source(c.name, c.recruitment_url, proxy=proxy)
                 if exists:
                     exists.kind = kind
                     exists.config = cfg

@@ -7,8 +7,9 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.crawler.source_defaults import apply_default_filters, infer_official_source, load_company_entrypoints
 from app.db import SessionLocal
-from app.models import CrawlSource
+from app.models import Company, CrawlSource
 
 
 def _parse_config(text: str) -> dict:
@@ -43,6 +44,38 @@ def _upsert_source(db, *, kind: str, name: str, enabled: bool, config: dict) -> 
     db.add(s)
     db.commit()
     return "created"
+
+
+def _upsert_company(db, row: dict) -> tuple[Company, bool]:
+    name = str(row.get("name") or "").strip()
+    if not name:
+        raise ValueError("company name is required")
+
+    existing = db.execute(select(Company).where(Company.name == name)).scalar_one_or_none()
+    if existing:
+        changed = False
+        for fld in ["company_type", "industry", "hq_location", "focus_directions", "website", "recruitment_url"]:
+            new_v = row.get(fld)
+            if new_v and not getattr(existing, fld):
+                setattr(existing, fld, str(new_v).strip())
+                changed = True
+        if changed:
+            db.add(existing)
+            db.commit()
+        return existing, False
+
+    c = Company(
+        name=name,
+        company_type=row.get("company_type"),
+        industry=row.get("industry"),
+        hq_location=row.get("hq_location"),
+        focus_directions=row.get("focus_directions"),
+        website=row.get("website"),
+        recruitment_url=row.get("recruitment_url"),
+    )
+    db.add(c)
+    db.commit()
+    return c, True
 
 
 def cmd_add_source(args: argparse.Namespace) -> None:
@@ -128,65 +161,10 @@ def cmd_seed_default(args: argparse.Namespace) -> None:
 
     proxy = (args.proxy or "").strip() or None
 
-    include = [
-        # Focus keywords
-        "新能源",
-        "锂电",
-        "电池",
-        "电芯",
-        "储能",
-        "BMS",
-        "电化学",
-        "材料",
-        "研发",
-        "后端",
-        "后台",
-        "软件开发",
-        "系统开发",
-        "全栈",
-        "大数据",
-        "数据平台",
-        "数据工程",
-        "数据开发",
-        "数据分析",
-        "算法",
-        "机器学习",
-        "人工智能",
-        "平台",
-        "中台",
-        "云",
-        "微服务",
-        "DevOps",
-        "SRE",
-        "运维",
-        "测试",
-        "银行科技",
-        "金融科技",
-        "fintech",
-        "bank",
-        "项目管理",
-        "项目经理",
-        "PM",
-        "架构",
-        "架构师",
-        "architecture",
-        "architect",
-    ]
-
-    exclude = [
-        "销售",
-        "市场",
-        "商务",
-        "运营",
-        "客服",
-        "财务",
-        "审计",
-        "法务",
-        "人力",
-        "行政",
-    ]
-
-    city_allow = ["北京", "上海", "广州", "深圳"]
+    defaults = apply_default_filters({})
+    include = defaults["include_keywords"]
+    exclude = defaults["exclude_keywords"]
+    city_allow = defaults["city_allowlist"]
 
     sources = [
         (
@@ -286,6 +264,62 @@ def cmd_seed_default(args: argparse.Namespace) -> None:
                 updated += 1
 
         print(f"seeded default sources: created={created} updated={updated} total={created+updated}")
+    finally:
+        db.close()
+
+
+def cmd_seed_official(args: argparse.Namespace) -> None:
+    proxy = (args.proxy or "").strip() or None
+    paths = [
+        "data/company_entrypoints_cn_seed.json",
+        "data/company_entrypoints_autofill_20260319_top.json",
+        "data/companies_seed_cn.json",
+    ]
+    rows = load_company_entrypoints(paths)
+    if not rows:
+        print("no bundled company entrypoints found")
+        return
+
+    db = SessionLocal()
+    try:
+        companies_created = 0
+        companies_seen = 0
+        sources_created = 0
+        sources_updated = 0
+        skipped_no_recruitment_url = 0
+
+        for row in rows:
+            c, created = _upsert_company(db, row)
+            companies_seen += 1
+            if created:
+                companies_created += 1
+
+            rec_url = (c.recruitment_url or "").strip()
+            if not rec_url:
+                skipped_no_recruitment_url += 1
+                continue
+
+            kind, cfg = infer_official_source(c.name, rec_url, proxy=proxy)
+            action = _upsert_source(db, kind=kind, name=f"Official:{c.name}", enabled=True, config=cfg)
+            if action == "created":
+                sources_created += 1
+            else:
+                sources_updated += 1
+
+        print(
+            json.dumps(
+                {
+                    "bundled_companies": len(rows),
+                    "companies_created": companies_created,
+                    "companies_seen": companies_seen,
+                    "sources_created": sources_created,
+                    "sources_updated": sources_updated,
+                    "skipped_no_recruitment_url": skipped_no_recruitment_url,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     finally:
         db.close()
 
@@ -399,6 +433,10 @@ def main() -> None:
     sd = sub.add_parser("seed-default")
     sd.add_argument("--proxy", default="")
     sd.set_defaults(fn=cmd_seed_default)
+
+    so = sub.add_parser("seed-official")
+    so.add_argument("--proxy", default="")
+    so.set_defaults(fn=cmd_seed_official)
 
     st = sub.add_parser("seed-template")
     st.set_defaults(fn=cmd_seed_template)

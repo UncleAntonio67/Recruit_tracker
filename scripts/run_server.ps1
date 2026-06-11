@@ -63,6 +63,7 @@ finally:
 
   if ([int]$hasJobs -eq 0) {
     & $py -m app.crawl seed-default --proxy $Proxy
+    & $py -m app.crawl seed-official --proxy $Proxy
     & $py -m app.crawl run --since-days $InitSinceDays
   }
 }

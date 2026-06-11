@@ -2,8 +2,10 @@
 
 import argparse
 import ast
+from collections import Counter
 import json
 from pathlib import Path
+import re
 
 from sqlalchemy import select
 
@@ -76,6 +78,80 @@ def _upsert_company(db, row: dict) -> tuple[Company, bool]:
     db.add(c)
     db.commit()
     return c, True
+
+
+def _normalize_official_company_name(name: str) -> str:
+    short = str(name or "").strip()
+    if short.startswith("Official:"):
+        short = short[len("Official:") :].strip()
+    short = re.sub(r"\s*[\(（][^()（）]{1,24}[\)）]\s*$", "", short).strip()
+    return short
+
+
+def _error_bucket(text: str | None) -> str:
+    s = str(text or "").strip().lower()
+    if not s:
+        return "none"
+    if "403" in s:
+        return "http_403"
+    if "404" in s:
+        return "http_404"
+    if "412" in s:
+        return "http_412"
+    if "502" in s:
+        return "http_502"
+    if "certificate_verify_failed" in s:
+        return "tls_cert"
+    if "unexpected_eof_while_reading" in s:
+        return "tls_eof"
+    if "legacy_renegotiation" in s:
+        return "tls_legacy"
+    if "infinite loop" in s or "redirect error" in s:
+        return "redirect_loop"
+    if "timed out" in s or "timeout" in s:
+        return "timeout"
+    return "other"
+
+
+def _is_foreign_company_name(name: str) -> bool:
+    short = _normalize_official_company_name(name)
+    foreign_markers = [
+        "IBM",
+        "Google",
+        "谷歌",
+        "Apple",
+        "苹果",
+        "Microsoft",
+        "微软",
+        "MathWorks",
+        "Bosch",
+        "博世",
+        "Panasonic",
+        "松下",
+        "Deloitte",
+        "德勤",
+    ]
+    s = short.lower()
+    return any(marker.lower() in s for marker in foreign_markers)
+
+
+def _is_junk_company_name(name: str) -> bool:
+    short = _normalize_official_company_name(name)
+    if not short:
+        return True
+    junk_markers = [
+        "互联网与科技",
+        "新能源与电池",
+        "银行与金融科技",
+        "全球跨国巨头",
+        "生命科学与材料",
+        "工业互联网",
+    ]
+    if any(marker in short for marker in junk_markers):
+        return True
+    if short in {"有限公司", "总公司", "分公司", "集团有限公司"}:
+        return True
+    return False
 
 
 def cmd_add_source(args: argparse.Namespace) -> None:
@@ -375,6 +451,157 @@ def cmd_seed_template(args: argparse.Namespace) -> None:
     ]
     print(json.dumps(template, ensure_ascii=False, indent=2))
 
+
+def cmd_audit_sources(args: argparse.Namespace) -> None:
+    curated_names = {
+        row["name"]
+        for row in load_company_entrypoints(
+            [
+                "data/company_entrypoints_cn_seed.json",
+                "data/company_entrypoints_autofill_20260319_top.json",
+                "data/companies_seed_cn.json",
+            ]
+        )
+    }
+
+    db = SessionLocal()
+    try:
+        sources = db.execute(select(CrawlSource).order_by(CrawlSource.name.asc())).scalars().all()
+        by_kind = Counter()
+        by_status = Counter()
+        by_enabled = Counter()
+        error_buckets = Counter()
+        official_dupes: dict[str, list[str]] = {}
+        official_suspect: list[dict] = []
+        official_foreign: list[dict] = []
+        official_non_curated: list[str] = []
+
+        official_sources = [s for s in sources if s.name.startswith("Official:")]
+        grouped: dict[str, list[str]] = {}
+
+        for s in sources:
+            by_kind[s.kind] += 1
+            by_status[s.last_status or "none"] += 1
+            by_enabled["enabled" if s.enabled else "disabled"] += 1
+            if s.last_error:
+                error_buckets[_error_bucket(s.last_error)] += 1
+
+        for s in official_sources:
+            normalized = _normalize_official_company_name(s.name)
+            grouped.setdefault(normalized, []).append(s.name)
+            if normalized not in curated_names:
+                official_non_curated.append(s.name)
+            if _is_junk_company_name(s.name):
+                official_suspect.append(
+                    {"name": s.name, "kind": s.kind, "status": s.last_status or "none", "enabled": s.enabled}
+                )
+            if _is_foreign_company_name(s.name):
+                official_foreign.append(
+                    {"name": s.name, "kind": s.kind, "status": s.last_status or "none", "enabled": s.enabled}
+                )
+
+        for normalized, names in grouped.items():
+            if len(names) > 1:
+                official_dupes[normalized] = sorted(names)
+
+        report = {
+            "sources_total": len(sources),
+            "official_total": len(official_sources),
+            "counts": {
+                "by_kind": dict(by_kind),
+                "by_status": dict(by_status),
+                "by_enabled": dict(by_enabled),
+                "error_buckets": dict(error_buckets),
+            },
+            "official": {
+                "duplicate_groups": len(official_dupes),
+                "duplicates": dict(sorted(official_dupes.items())[: args.limit]),
+                "foreign_count": len(official_foreign),
+                "foreign_examples": official_foreign[: args.limit],
+                "suspect_count": len(official_suspect),
+                "suspect_examples": official_suspect[: args.limit],
+                "non_curated_count": len(official_non_curated),
+                "non_curated_examples": official_non_curated[: args.limit],
+            },
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    finally:
+        db.close()
+
+
+def cmd_disable_noisy_sources(args: argparse.Namespace) -> None:
+    curated_names = {
+        row["name"]
+        for row in load_company_entrypoints(
+            [
+                "data/company_entrypoints_cn_seed.json",
+                "data/company_entrypoints_autofill_20260319_top.json",
+                "data/companies_seed_cn.json",
+            ]
+        )
+    }
+    hard_disable_buckets = {"http_404", "redirect_loop"}
+    soft_disable_buckets = {"http_403", "http_412", "tls_cert", "tls_eof", "tls_legacy"}
+
+    db = SessionLocal()
+    try:
+        sources = db.execute(select(CrawlSource).order_by(CrawlSource.name.asc())).scalars().all()
+        by_name = {s.name: s for s in sources}
+        changed: list[dict] = []
+
+        for s in sources:
+            if not s.enabled:
+                continue
+
+            reason = ""
+            bucket = _error_bucket(s.last_error)
+            normalized = _normalize_official_company_name(s.name)
+
+            if s.name.startswith("Official:") and s.last_status == "error":
+                if args.include_dead_links and bucket in hard_disable_buckets:
+                    reason = f"auto:noisy_error:{bucket}"
+                elif args.include_soft_errors and normalized not in curated_names and bucket in soft_disable_buckets:
+                    reason = f"auto:noisy_error:{bucket}"
+            elif s.name.startswith("Official:") and _is_foreign_company_name(s.name):
+                reason = "auto:foreign_company"
+            elif s.name.startswith("Official:") and _is_junk_company_name(s.name):
+                reason = "auto:junk_company_name"
+            elif s.name.startswith("Official:"):
+                base_name = f"Official:{normalized}"
+                if normalized and s.name != base_name and base_name in by_name:
+                    reason = "auto:duplicate_alias"
+
+            if not reason:
+                continue
+
+            cfg = dict(s.config or {})
+            cfg["disabled_reason"] = reason
+            cfg["disabled_at_audit"] = True
+            changed.append({"name": s.name, "kind": s.kind, "reason": reason, "status": s.last_status or "none"})
+
+            if args.apply:
+                s.enabled = False
+                s.config = cfg
+                db.add(s)
+
+        if args.apply:
+            db.commit()
+
+        print(
+            json.dumps(
+                {
+                    "apply": bool(args.apply),
+                    "disabled_count": len(changed),
+                    "changes": changed[: args.limit],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+    finally:
+        db.close()
+
+
 def cmd_run(args: argparse.Namespace) -> None:
     from app.crawler.runner import run
 
@@ -441,9 +668,20 @@ def main() -> None:
     st = sub.add_parser("seed-template")
     st.set_defaults(fn=cmd_seed_template)
 
+    au = sub.add_parser("audit-sources")
+    au.add_argument("--limit", type=int, default=20)
+    au.set_defaults(fn=cmd_audit_sources)
+
+    dn = sub.add_parser("disable-noisy-sources")
+    dn.add_argument("--apply", action="store_true")
+    dn.add_argument("--include-dead-links", action="store_true")
+    dn.add_argument("--include-soft-errors", action="store_true")
+    dn.add_argument("--limit", type=int, default=50)
+    dn.set_defaults(fn=cmd_disable_noisy_sources)
+
     rn = sub.add_parser("run")
     rn.add_argument("--since-days", type=int, default=180)
-    rn.add_argument("--mode", choices=["official", "core", "all"], default="official")
+    rn.add_argument("--mode", choices=["priority", "official", "core", "all"], default="official")
     rn.set_defaults(fn=cmd_run)
 
     r1 = sub.add_parser("run-one")

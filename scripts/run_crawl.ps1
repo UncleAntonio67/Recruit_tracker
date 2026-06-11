@@ -1,8 +1,8 @@
 param(
   [int]$SinceDays = 180,
   [string]$Proxy = "",
-  [ValidateSet("official","core","all")]
-  [string]$Mode = "official"
+  [ValidateSet("priority","official","core","all")]
+  [string]$Mode = "priority"
 )
 
 $ErrorActionPreference = "Stop"

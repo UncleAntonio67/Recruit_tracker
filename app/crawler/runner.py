@@ -11,6 +11,15 @@ from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, find_salary
 from app.models import Company, CrawlSource, JobPosting, JobSource
 
 
+def _is_priority_source(s: CrawlSource) -> bool:
+    if not s.enabled:
+        return False
+    name = (s.name or "").strip()
+    if name in {"Tencent", "Kuaishou", "JD", "Guopin", "中核集团", "上海电气"}:
+        return True
+    return name.startswith("Official:")
+
+
 def _upsert_company(db: Session, name: str | None) -> Company | None:
     if not name:
         return None
@@ -345,6 +354,8 @@ def run(db: Session, since_days: int = 180, only_enabled: bool = True, mode: str
         sources_stmt = sources_stmt.where(~CrawlSource.name.ilike("Guopin:%"))
 
     sources = db.execute(sources_stmt.order_by(CrawlSource.created_at.asc())).scalars().all()
+    if mode_s == "priority":
+        sources = [s for s in sources if _is_priority_source(s) and not s.name.startswith("Guopin:")]
 
     stats = {
         "sources": len(sources),

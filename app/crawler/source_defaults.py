@@ -223,4 +223,3 @@ def load_company_entrypoints(paths: list[str]) -> list[dict]:
                 "recruitment_url": str(row.get("recruitment_url") or prev.get("recruitment_url") or "").strip() or None,
             }
     return list(merged.values())
-

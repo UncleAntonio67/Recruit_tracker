@@ -14,10 +14,27 @@ from app.models import Company, CrawlSource, JobPosting, JobSource
 def _is_priority_source(s: CrawlSource) -> bool:
     if not s.enabled:
         return False
+    cfg = s.config or {}
+    if str(cfg.get("priority_group") or "").strip():
+        return True
     name = (s.name or "").strip()
     if name in {"Tencent", "Kuaishou", "JD", "Guopin", "中核集团", "上海电气"}:
         return True
     return name.startswith("Official:")
+
+
+def _source_matches_mode(s: CrawlSource, mode_s: str) -> bool:
+    if mode_s == "priority":
+        return _is_priority_source(s)
+    if not mode_s.startswith("priority-"):
+        return True
+    cfg = s.config or {}
+    target = mode_s[len("priority-") :].strip().lower()
+    groups = {
+        str(cfg.get("priority_group") or "").strip().lower(),
+        str(cfg.get("schedule_group") or "").strip().lower(),
+    }
+    return target in groups or any(g.startswith(target + "-") for g in groups if g)
 
 
 def _upsert_company(db: Session, name: str | None) -> Company | None:
@@ -354,8 +371,8 @@ def run(db: Session, since_days: int = 180, only_enabled: bool = True, mode: str
         sources_stmt = sources_stmt.where(~CrawlSource.name.ilike("Guopin:%"))
 
     sources = db.execute(sources_stmt.order_by(CrawlSource.created_at.asc())).scalars().all()
-    if mode_s == "priority":
-        sources = [s for s in sources if _is_priority_source(s) and not s.name.startswith("Guopin:")]
+    if mode_s == "priority" or mode_s.startswith("priority-"):
+        sources = [s for s in sources if _source_matches_mode(s, mode_s) and not s.name.startswith("Guopin:")]
 
     stats = {
         "sources": len(sources),

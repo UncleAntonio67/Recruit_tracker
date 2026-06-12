@@ -9,7 +9,7 @@ import re
 
 from sqlalchemy import select
 
-from app.crawler.source_defaults import apply_default_filters, infer_official_source, load_company_entrypoints
+from app.crawler.source_defaults import apply_default_filters, build_official_source, infer_official_source, load_company_entrypoints
 from app.db import SessionLocal
 from app.models import Company, CrawlSource
 
@@ -347,6 +347,7 @@ def cmd_seed_default(args: argparse.Namespace) -> None:
 def cmd_seed_official(args: argparse.Namespace) -> None:
     proxy = (args.proxy or "").strip() or None
     paths = [
+        "data/priority_company_profiles_cn.json",
         "data/company_entrypoints_cn_seed.json",
         "data/company_entrypoints_autofill_20260319_top.json",
         "data/companies_seed_cn.json",
@@ -375,8 +376,11 @@ def cmd_seed_official(args: argparse.Namespace) -> None:
                 skipped_no_recruitment_url += 1
                 continue
 
-            kind, cfg = infer_official_source(c.name, rec_url, proxy=proxy)
-            action = _upsert_source(db, kind=kind, name=f"Official:{c.name}", enabled=True, config=cfg)
+            row2 = dict(row)
+            row2["name"] = c.name
+            row2["recruitment_url"] = rec_url
+            kind, source_name, cfg = build_official_source(row2, proxy=proxy)
+            action = _upsert_source(db, kind=kind, name=source_name, enabled=True, config=cfg)
             if action == "created":
                 sources_created += 1
             else:
@@ -450,6 +454,49 @@ def cmd_seed_template(args: argparse.Namespace) -> None:
         },
     ]
     print(json.dumps(template, ensure_ascii=False, indent=2))
+
+
+def cmd_seed_priority(args: argparse.Namespace) -> None:
+    proxy = (args.proxy or "").strip() or None
+    rows = load_company_entrypoints(["data/priority_company_profiles_cn.json"])
+    if not rows:
+        print("no priority company profiles found")
+        return
+
+    db = SessionLocal()
+    try:
+        companies_created = 0
+        companies_seen = 0
+        sources_created = 0
+        sources_updated = 0
+
+        for row in rows:
+            c, created = _upsert_company(db, row)
+            companies_seen += 1
+            if created:
+                companies_created += 1
+            kind, source_name, cfg = build_official_source(row, proxy=proxy)
+            action = _upsert_source(db, kind=kind, name=source_name, enabled=True, config=cfg)
+            if action == "created":
+                sources_created += 1
+            else:
+                sources_updated += 1
+
+        print(
+            json.dumps(
+                {
+                    "priority_companies": len(rows),
+                    "companies_created": companies_created,
+                    "companies_seen": companies_seen,
+                    "sources_created": sources_created,
+                    "sources_updated": sources_updated,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+    finally:
+        db.close()
 
 
 def cmd_audit_sources(args: argparse.Namespace) -> None:
@@ -665,6 +712,10 @@ def main() -> None:
     so.add_argument("--proxy", default="")
     so.set_defaults(fn=cmd_seed_official)
 
+    sp = sub.add_parser("seed-priority")
+    sp.add_argument("--proxy", default="")
+    sp.set_defaults(fn=cmd_seed_priority)
+
     st = sub.add_parser("seed-template")
     st.set_defaults(fn=cmd_seed_template)
 
@@ -681,7 +732,11 @@ def main() -> None:
 
     rn = sub.add_parser("run")
     rn.add_argument("--since-days", type=int, default=180)
-    rn.add_argument("--mode", choices=["priority", "official", "core", "all"], default="official")
+    rn.add_argument(
+        "--mode",
+        choices=["priority", "priority-energy", "priority-battery", "priority-tech", "priority-finance", "official", "core", "all"],
+        default="official",
+    )
     rn.set_defaults(fn=cmd_run)
 
     r1 = sub.add_parser("run-one")

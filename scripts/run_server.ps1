@@ -46,6 +46,7 @@ if ($Proxy) {
 if ($CrawlIntervalHours -gt 0) {
   $env:CRAWL_INTERVAL_HOURS = "$CrawlIntervalHours"
   $env:CRAWL_SINCE_DAYS = "$InitSinceDays"
+  if (-not $env:CRAWL_MODE) { $env:CRAWL_MODE = "priority" }
   $env:CRAWL_INITIAL_DELAY_SEC = "15"
   $env:CRAWL_JITTER_SEC = "30"
 }
@@ -62,9 +63,10 @@ finally:
 "@ | & $py -
 
   if ([int]$hasJobs -eq 0) {
+    & $py -m app.crawl seed-priority --proxy $Proxy
     & $py -m app.crawl seed-default --proxy $Proxy
     & $py -m app.crawl seed-official --proxy $Proxy
-    & $py -m app.crawl run --since-days $InitSinceDays
+    & $py -m app.crawl run --since-days $InitSinceDays --mode priority
   }
 }
 

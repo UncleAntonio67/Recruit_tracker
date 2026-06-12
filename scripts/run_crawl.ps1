@@ -1,7 +1,7 @@
 param(
   [int]$SinceDays = 180,
   [string]$Proxy = "",
-  [ValidateSet("priority","official","core","all")]
+  [ValidateSet("priority","priority-energy","priority-battery","priority-tech","priority-finance","official","core","all")]
   [string]$Mode = "priority"
 )
 

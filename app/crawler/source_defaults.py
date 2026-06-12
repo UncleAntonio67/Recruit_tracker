@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 
 def default_include_keywords() -> list[str]:
     return [
-        # Computer / software / data
         "后端",
         "后台",
         "前端",
@@ -39,19 +38,16 @@ def default_include_keywords() -> list[str]:
         "云",
         "中台",
         "安全",
-        # Fintech / bank tech
         "金融科技",
         "银行科技",
         "核心系统",
         "支付",
         "风控",
-        # Project / architecture management
         "项目管理",
         "项目经理",
         "PMO",
         "交付",
         "实施",
-        # Energy / battery / chemistry
         "新能源",
         "储能",
         "锂电",
@@ -106,7 +102,13 @@ def apply_default_filters(cfg: dict | None) -> dict:
     return out
 
 
-def infer_official_source(company_name: str, entry_url: str, *, proxy: str | None = None) -> tuple[str, dict]:
+def infer_official_source(
+    company_name: str,
+    entry_url: str,
+    *,
+    proxy: str | None = None,
+    overrides: dict | None = None,
+) -> tuple[str, dict]:
     """Infer a CrawlSource kind+config from an official recruitment entrypoint."""
 
     u = (entry_url or "").strip()
@@ -152,7 +154,7 @@ def infer_official_source(company_name: str, entry_url: str, *, proxy: str | Non
         cfg = {
             "base_url": f"{p.scheme}://{p.netloc}",
             "company_name": company_name.strip(),
-            "jc": 1,  # 社招
+            "jc": 1,
             "page_size": 30,
             "max_pages": 40,
             "source_type": "official",
@@ -175,7 +177,7 @@ def infer_official_source(company_name: str, entry_url: str, *, proxy: str | Non
         cfg = {
             "base_url": base.replace("http://", "https://"),
             "company_name": company_name.strip(),
-            "recruit_type": 2,  # 社招
+            "recruit_type": 2,
             "page_size": 12,
             "max_pages": 12,
             "source_type": "official",
@@ -184,9 +186,36 @@ def infer_official_source(company_name: str, entry_url: str, *, proxy: str | Non
         kind = "rss"
         cfg = {"feed_url": u, "company_name": company_name.strip(), "source_type": "official"}
 
+    if overrides:
+        override_kind = str(overrides.get("source_kind") or "").strip()
+        if override_kind:
+            kind = override_kind
+        override_cfg = overrides.get("source_config")
+        if isinstance(override_cfg, dict):
+            merged = dict(cfg)
+            merged.update(override_cfg)
+            cfg = merged
+        for key in ("priority_group", "priority_rank", "schedule_group"):
+            value = overrides.get(key)
+            if value is not None and str(value).strip():
+                cfg[key] = str(value).strip()
+
     if proxy and proxy.strip():
         cfg["proxy"] = proxy.strip()
     return kind, apply_default_filters(cfg)
+
+
+def build_official_source(row: dict, *, proxy: str | None = None) -> tuple[str, str, dict]:
+    company_name = str(row.get("name") or "").strip()
+    if not company_name:
+        raise ValueError("company name is required")
+    entry_url = str(row.get("recruitment_url") or "").strip()
+    if not entry_url:
+        raise ValueError("recruitment_url is required")
+
+    kind, cfg = infer_official_source(company_name, entry_url, proxy=proxy, overrides=row)
+    source_name = str(row.get("source_name") or f"Official:{company_name}").strip()
+    return kind, source_name, cfg
 
 
 def load_company_entrypoints(paths: list[str]) -> list[dict]:
@@ -221,5 +250,13 @@ def load_company_entrypoints(paths: list[str]) -> list[dict]:
                 "focus_directions": str(row.get("focus_directions") or prev.get("focus_directions") or "").strip() or None,
                 "website": str(row.get("website") or prev.get("website") or "").strip() or None,
                 "recruitment_url": str(row.get("recruitment_url") or prev.get("recruitment_url") or "").strip() or None,
+                "source_kind": str(row.get("source_kind") or prev.get("source_kind") or "").strip() or None,
+                "source_name": str(row.get("source_name") or prev.get("source_name") or "").strip() or None,
+                "priority_group": str(row.get("priority_group") or prev.get("priority_group") or "").strip() or None,
+                "priority_rank": str(row.get("priority_rank") or prev.get("priority_rank") or "").strip() or None,
+                "schedule_group": str(row.get("schedule_group") or prev.get("schedule_group") or "").strip() or None,
+                "source_config": row.get("source_config")
+                if isinstance(row.get("source_config"), dict)
+                else (prev.get("source_config") if isinstance(prev.get("source_config"), dict) else None),
             }
     return list(merged.values())

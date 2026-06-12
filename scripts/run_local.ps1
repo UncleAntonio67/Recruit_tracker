@@ -47,9 +47,8 @@ if ($Proxy) {
 if ($CrawlIntervalHours -gt 0) {
   $env:CRAWL_INTERVAL_HOURS = "$CrawlIntervalHours"
   $env:CRAWL_SINCE_DAYS = "$InitSinceDays"
-  # Scheduled default: run "official" sources (Official:* html_list/hotjob/m_zhiye, plus global sources),
-  # while still skipping per-company Guopin keyword sources.
-  if (-not $env:CRAWL_MODE) { $env:CRAWL_MODE = "official" }
+  # Scheduled default: run curated priority sources first to keep the cycle bounded.
+  if (-not $env:CRAWL_MODE) { $env:CRAWL_MODE = "priority" }
   $env:CRAWL_INITIAL_DELAY_SEC = "15"
   $env:CRAWL_JITTER_SEC = "30"
 }
@@ -67,10 +66,11 @@ finally:
 "@ | & $py -
 
   if ([int]$hasJobs -eq 0) {
-    # Seed default sources (known-working public endpoints) then crawl.
+    # Seed curated priority sources first, then default/global sources.
+    & $py -m app.crawl seed-priority --proxy $Proxy
     & $py -m app.crawl seed-default --proxy $Proxy
     & $py -m app.crawl seed-official --proxy $Proxy
-    & $py -m app.crawl run --since-days $InitSinceDays
+    & $py -m app.crawl run --since-days $InitSinceDays --mode priority
   }
 }
 

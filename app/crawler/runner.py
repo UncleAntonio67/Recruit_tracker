@@ -18,9 +18,9 @@ def _is_priority_source(s: CrawlSource) -> bool:
     if str(cfg.get("priority_group") or "").strip():
         return True
     name = (s.name or "").strip()
-    if name in {"Tencent", "Kuaishou", "JD", "Guopin", "中核集团", "上海电气"}:
+    if name in {"Tencent", "Kuaishou", "JD", "Guopin"}:
         return True
-    return name.startswith("Official:")
+    return False
 
 
 def _source_matches_mode(s: CrawlSource, mode_s: str) -> bool:

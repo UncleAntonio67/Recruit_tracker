@@ -2,6 +2,8 @@
 
 import gzip
 import json
+import shutil
+import subprocess
 import zlib
 from urllib.parse import urlencode
 from urllib.request import ProxyHandler, Request, build_opener
@@ -19,6 +21,49 @@ def _opener(proxy: str | None):
     return build_opener()
 
 
+def _curl_request_bytes(
+    url: str,
+    *,
+    method: str,
+    data: bytes | None,
+    proxy: str | None,
+    timeout: int,
+    headers: dict[str, str],
+) -> bytes:
+    curl = shutil.which("curl.exe") or shutil.which("curl")
+    if not curl:
+        raise RuntimeError("curl not found")
+
+    cmd = [
+        curl,
+        "--silent",
+        "--show-error",
+        "--location",
+        "--max-redirs",
+        "8",
+        "--compressed",
+        "--request",
+        method.upper(),
+        "--connect-timeout",
+        str(max(5, min(timeout, 30))),
+        "--max-time",
+        str(timeout),
+    ]
+    if proxy:
+        cmd.extend(["--proxy", proxy])
+    for k, v in headers.items():
+        cmd.extend(["--header", f"{k}: {v}"])
+    if data is not None:
+        cmd.extend(["--data-binary", "@-"])
+    cmd.append(url)
+
+    proc = subprocess.run(cmd, input=data, capture_output=True, check=False)
+    if proc.returncode != 0:
+        stderr = proc.stderr.decode("utf-8", errors="ignore").strip() or f"curl exit {proc.returncode}"
+        raise RuntimeError(stderr)
+    return proc.stdout
+
+
 def request_bytes(
     url: str,
     *,
@@ -34,23 +79,46 @@ def request_bytes(
         hdrs.update({str(k): str(v) for k, v in headers.items()})
 
     req = Request(url, headers=hdrs, data=data, method=method.upper())
-    with op.open(req, timeout=timeout) as resp:
-        raw = resp.read()
-        enc = (resp.headers.get("Content-Encoding") or "").lower()
-        if "gzip" in enc:
-            try:
-                return gzip.decompress(raw)
-            except Exception:
-                return raw
-        if "deflate" in enc:
-            try:
-                return zlib.decompress(raw)
-            except Exception:
+    try:
+        with op.open(req, timeout=timeout) as resp:
+            raw = resp.read()
+            enc = (resp.headers.get("Content-Encoding") or "").lower()
+            if "gzip" in enc:
                 try:
-                    return zlib.decompress(raw, -zlib.MAX_WBITS)
+                    return gzip.decompress(raw)
                 except Exception:
                     return raw
-        return raw
+            if "deflate" in enc:
+                try:
+                    return zlib.decompress(raw)
+                except Exception:
+                    try:
+                        return zlib.decompress(raw, -zlib.MAX_WBITS)
+                    except Exception:
+                        return raw
+            return raw
+    except Exception as e:
+        msg = str(e).lower()
+        retryable = any(
+            token in msg
+            for token in [
+                "unsafe_legacy_renegotiation_disabled",
+                "unexpected_eof_while_reading",
+                "redirect error",
+                "temporarily unavailable",
+                "certificate_verify_failed",
+            ]
+        )
+        if not retryable:
+            raise
+        return _curl_request_bytes(
+            url,
+            method=method,
+            data=data,
+            proxy=proxy,
+            timeout=timeout,
+            headers=hdrs,
+        )
 
 
 def get_text(

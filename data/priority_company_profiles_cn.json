@@ -1,23 +1,5 @@
 [
   {
-    "name": "国家电网",
-    "company_type": "央企",
-    "industry": "能源与电力",
-    "hq_location": "北京",
-    "focus_directions": "电力信息化、平台研发、数据研发、系统开发",
-    "website": "https://www.sgcc.com.cn/",
-    "recruitment_url": "https://zhaopin.sgcc.com.cn",
-    "priority_group": "energy",
-    "priority_rank": "p0",
-    "schedule_group": "energy-a",
-    "source_kind": "html_list",
-    "source_config": {
-      "list_url": "https://zhaopin.sgcc.com.cn",
-      "url_contains": ["job", "post", "zhaopin"],
-      "title_contains": ["开发", "架构", "数据", "平台", "研发", "信息化", "系统"]
-    }
-  },
-  {
     "name": "国家能源集团",
     "company_type": "央企",
     "industry": "能源与电力",
@@ -147,7 +129,7 @@
     "source_kind": "html_list",
     "source_config": {
       "list_url": "https://job.byd.com",
-      "url_contains": ["job", "jobs", "position", "campus", "social", "recruit"],
+      "url_contains": ["job", "jobs", "position", "social", "recruit"],
       "url_excludes": ["campus", "intern", "xiaozhao"],
       "title_contains": ["开发", "架构", "前端", "后端", "全栈", "平台", "数据", "BMS", "电池", "储能"]
     }
@@ -236,7 +218,7 @@
     "industry": "科技与软件",
     "hq_location": "东莞/深圳/北京",
     "focus_directions": "软件、平台、架构、数据研发",
-    "website": "https://www.vivo.com/",
+    "website": "https://hr.vivo.com/",
     "recruitment_url": "https://hr.vivo.com/",
     "priority_group": "tech",
     "priority_rank": "p1",
@@ -249,7 +231,7 @@
     "hq_location": "广州/深圳/上海",
     "focus_directions": "智能驾驶、软件、平台、数据",
     "website": "https://www.xiaopeng.com/",
-    "recruitment_url": "https://social.xiaopeng.com",
+    "recruitment_url": "https://social.xiaopeng.com/",
     "priority_group": "tech",
     "priority_rank": "p1",
     "schedule_group": "tech-b"
@@ -268,7 +250,7 @@
     "source_kind": "html_list",
     "source_config": {
       "list_url": "https://job.ccb.com",
-      "url_contains": ["job", "position", "recruit", "campus", "social"],
+      "url_contains": ["job", "position", "recruit", "social"],
       "url_excludes": ["campus", "intern", "xiaozhao"],
       "title_contains": ["开发", "架构", "前端", "后端", "平台", "数据", "金融科技", "系统", "项目"]
     }
@@ -312,8 +294,14 @@
     "website": "https://job.10086.cn/",
     "recruitment_url": "https://job.10086.cn",
     "priority_group": "tech",
-    "priority_rank": "p1",
-    "schedule_group": "tech-b"
+    "priority_rank": "p0",
+    "schedule_group": "tech-a",
+    "source_kind": "html_list",
+    "source_config": {
+      "list_url": "https://job.10086.cn/personal/job/?code=115",
+      "url_contains": ["detail.html?id="],
+      "title_contains": ["开发", "架构", "软件", "数据", "平台", "信息技术中心", "系统"]
+    }
   },
   {
     "name": "中国软件",

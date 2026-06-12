@@ -469,6 +469,7 @@ def cmd_seed_priority(args: argparse.Namespace) -> None:
         companies_seen = 0
         sources_created = 0
         sources_updated = 0
+        wanted_source_names: set[str] = set()
 
         for row in rows:
             c, created = _upsert_company(db, row)
@@ -476,11 +477,30 @@ def cmd_seed_priority(args: argparse.Namespace) -> None:
             if created:
                 companies_created += 1
             kind, source_name, cfg = build_official_source(row, proxy=proxy)
+            wanted_source_names.add(source_name)
             action = _upsert_source(db, kind=kind, name=source_name, enabled=True, config=cfg)
             if action == "created":
                 sources_created += 1
             else:
                 sources_updated += 1
+
+        synced_off = 0
+        sources = db.execute(select(CrawlSource).where(CrawlSource.name.like("Official:%"))).scalars().all()
+        for s in sources:
+            if s.name in wanted_source_names:
+                continue
+            cfg = dict(s.config or {})
+            touched = False
+            for key in ("priority_group", "priority_rank", "schedule_group"):
+                if key in cfg:
+                    cfg.pop(key, None)
+                    touched = True
+            if touched:
+                s.config = cfg
+                db.add(s)
+                synced_off += 1
+        if synced_off:
+            db.commit()
 
         print(
             json.dumps(
@@ -490,6 +510,7 @@ def cmd_seed_priority(args: argparse.Namespace) -> None:
                     "companies_seen": companies_seen,
                     "sources_created": sources_created,
                     "sources_updated": sources_updated,
+                    "priority_metadata_cleared": synced_off,
                 },
                 ensure_ascii=False,
                 indent=2,

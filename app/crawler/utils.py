@@ -33,6 +33,26 @@ def parse_dt(value: str | None) -> datetime | None:
         except Exception:
             return None
 
+    # Common plain date: YYYY-MM-DD
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", v)
+    if m:
+        try:
+            y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            return datetime(y, mo, d, tzinfo=UTC)
+        except Exception:
+            return None
+
+    # Common datetime: YYYY-MM-DD HH:MM[:SS]
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?", v)
+    if m:
+        try:
+            y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            hh, mm = int(m.group(4)), int(m.group(5))
+            ss = int(m.group(6) or 0)
+            return datetime(y, mo, d, hh, mm, ss, tzinfo=UTC)
+        except Exception:
+            return None
+
     # ISO 8601
     try:
         iso = v.replace("Z", "+00:00")

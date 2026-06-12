@@ -300,11 +300,13 @@
     "priority_group": "tech",
     "priority_rank": "p0",
     "schedule_group": "tech-a",
-    "source_kind": "html_list",
+    "source_kind": "cmcc_jobs",
     "source_config": {
-      "list_url": "https://job.10086.cn/personal/job/?code=115",
-      "url_contains": ["detail.html?id="],
-      "title_contains": ["开发", "架构", "软件", "数据", "平台", "信息技术中心", "系统"]
+      "page_size": 20,
+      "max_pages": 8,
+      "company_ids": ["", "3", "19", "39"],
+      "type_allowlist": ["2"],
+      "search_key": ""
     }
   },
   {

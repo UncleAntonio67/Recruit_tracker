@@ -722,6 +722,7 @@ def main() -> None:
             "m_zhiye",
             "hotjob",
             "eve_social",
+            "cmcc_jobs",
             "greenhouse",
             "lever",
             "rss",

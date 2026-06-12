@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.crawler.connectors import eve_social, greenhouse, html_list, hotjob, iguopin, jd, kuaishou, lever, m_zhiye, rss, tencent, url_list
+from app.crawler.connectors import cmcc_jobs, eve_social, greenhouse, html_list, hotjob, iguopin, jd, kuaishou, lever, m_zhiye, rss, tencent, url_list
 from app.crawler.job_types import RawJob
 from app.crawler.utils import auto_tags, clamp_excerpt, fingerprint, find_salary_text, is_recent, parse_salary_k, sha1, utcnow
 from app.models import Company, CrawlSource, JobPosting, JobSource
@@ -316,6 +316,9 @@ def _run_source(db: Session, s: CrawlSource, *, since_days: int) -> dict:
             src_type = cfg.get("source_type") or "official"
         elif s.kind == "eve_social":
             raw_jobs = eve_social.fetch(cfg, proxy=cfg.get("proxy"))
+            src_type = cfg.get("source_type") or "official"
+        elif s.kind == "cmcc_jobs":
+            raw_jobs = cmcc_jobs.fetch(cfg, proxy=cfg.get("proxy"))
             src_type = cfg.get("source_type") or "official"
         else:
             raise ValueError(f"unknown kind: {s.kind}")

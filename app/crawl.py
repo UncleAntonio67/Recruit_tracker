@@ -714,7 +714,20 @@ def main() -> None:
     ad.add_argument(
         "--kind",
         required=True,
-        choices=["tencent", "kuaishou", "iguopin", "jd", "m_zhiye", "hotjob", "greenhouse", "lever", "rss", "html_list", "url_list"],
+        choices=[
+            "tencent",
+            "kuaishou",
+            "iguopin",
+            "jd",
+            "m_zhiye",
+            "hotjob",
+            "eve_social",
+            "greenhouse",
+            "lever",
+            "rss",
+            "html_list",
+            "url_list",
+        ],
     )
     ad.add_argument("--name", required=True)
     ad.add_argument("--disabled", action="store_true")

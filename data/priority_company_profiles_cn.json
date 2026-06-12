@@ -153,10 +153,14 @@
     "hq_location": "惠州/北京/上海",
     "focus_directions": "锂电、储能、软件、数据平台",
     "website": "https://www.evebattery.com/",
-    "recruitment_url": "https://eveenergy.zhiye.com/social/jobs",
+    "recruitment_url": "https://www.evebattery.com/social-recruitment",
     "priority_group": "battery",
     "priority_rank": "p1",
-    "schedule_group": "energy-b"
+    "schedule_group": "energy-b",
+    "source_kind": "eve_social",
+    "source_config": {
+      "page_url": "https://www.evebattery.com/social-recruitment"
+    }
   },
   {
     "name": "阳光电源",
